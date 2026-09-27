@@ -1,0 +1,17 @@
+.history-tabs{display:flex;gap:3px;border-bottom:1px solid var(--studio-line);padding:0 2px 7px;flex:none}.history-tabs button{flex:1;border:0;background:transparent;color:var(--studio-muted);font:inherit;font-size:12px;min-height:34px;border-radius:7px;cursor:pointer}.history-tabs button[aria-selected=true]{background:var(--studio-hover);color:var(--studio-ink);font-weight:600}.history-tabs button:focus-visible,.history-section button:focus-visible{outline:2px solid var(--studio-blue);outline-offset:2px}.history-section{display:flex;flex:1;min-height:0;flex-direction:column;gap:12px}.history-section[hidden]{display:none!important}.history-section .history-new{flex:none}.development-history-list{flex:1;min-height:0;overflow:auto;scrollbar-gutter:stable}.development-history-notice{font-size:11px;color:var(--studio-muted);line-height:1.6;padding:0 8px}.development-history-list .history-item:disabled{opacity:.65;cursor:default}.history-sidebar{gap:13px}.history-section #historyList{flex:1;min-height:35px}@media(max-width:760px){.history-sidebar{max-height:310px}.history-section{gap:8px}.history-section #historyList,.development-history-list{min-height:40px;max-height:95px}.history-tabs button{min-height:36px}}
+.history-sidebar,.history-section{box-sizing:border-box;min-width:0}.history-section{width:100%;max-width:100%;overflow-x:hidden}.history-section>*{min-width:0;max-width:100%;box-sizing:border-box}
+.development-jobs-heading{font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--studio-muted,#62645e);margin:14px 6px 7px}.development-jobs-list{display:flex;flex-direction:column;gap:3px}.development-job{display:flex;flex-direction:column;align-items:flex-start;gap:4px;white-space:normal}.development-job span{width:100%;overflow-wrap:anywhere;text-align:left}.development-job small{font-size:10px;font-weight:400;color:var(--studio-muted,#62645e)}
+/* Each section remains reachable even with many dispatched jobs. */
+#developmentHistoryPanel{overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px}
+#developmentHistoryPanel>.development-jobs-heading,#developmentHistoryPanel>.development-history-notice{flex:none}
+#developmentHistoryPanel>.development-jobs-list,#developmentHistoryPanel>.development-history-list{flex:none;min-height:0;max-height:clamp(90px,25dvh,250px);overflow-y:auto;scrollbar-gutter:stable}
+.development-jobs-list>.development-job{flex-shrink:0}
+@media(max-width:760px){#developmentHistoryPanel>.development-jobs-list,#developmentHistoryPanel>.development-history-list{max-height:110px}}
+
+.companion-history-row{display:flex;align-items:center;gap:2px;border-radius:8px;min-width:0}
+.companion-history-row .history-item{flex:1;min-width:0;width:auto;margin:0}
+.history-delete{flex:none;width:30px;height:32px;border:0;border-radius:6px;background:transparent;color:var(--studio-muted);cursor:pointer;opacity:0;display:grid;place-items:center}
+.companion-history-row:hover .history-delete,.companion-history-row:focus-within .history-delete{opacity:1}
+.history-delete:hover{background:var(--studio-hover);color:var(--studio-ink)}
+.history-delete:focus-visible{outline:2px solid var(--studio-blue);outline-offset:1px}
+@media(hover:none){.history-delete{opacity:1}}

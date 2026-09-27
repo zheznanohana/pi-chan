@@ -1,0 +1,26 @@
+*{box-sizing:border-box;user-select:none}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;font-family:system-ui,"Microsoft YaHei",sans-serif}body{display:flex;flex-direction:column;align-items:center;padding:12px 10px 8px;--look:0deg;--lean:0px}
+#speechBubble{width:100%;min-height:48px;max-height:70px;padding:10px 15px;border-radius:24px;background:rgba(255,255,255,.96);box-shadow:0 4px 14px #0002;border:1px solid #f1f1f1;font-size:11px;line-height:1.5;color:#747780;overflow:hidden;opacity:1;transition:opacity .2s;flex-shrink:0}#speechBubble strong{display:block;color:#272b35;font-size:12px}#speechBubble span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}#speechBubble.hidden{opacity:0;pointer-events:none}
+#character{flex:1;min-height:0;width:180px;position:relative;cursor:grab;touch-action:none;outline:none}#character:focus-visible{border-radius:30px;outline:2px solid #f7a64c}#character:active{cursor:grabbing}#motion{position:absolute;inset:0;transform-origin:50% 92%;animation:breathe 3.5s ease-in-out infinite}#sprite{width:100%;height:100%;object-fit:contain;image-rendering:pixelated;transform:translateX(var(--lean)) rotate(var(--look));transition:transform .3s;pointer-events:none}#shadow{position:absolute;width:65px;height:7px;border-radius:50%;background:#343b5118;bottom:3px;left:calc(50% - 32px);z-index:-1}nav{display:flex;gap:8px;height:28px;align-items:center;flex-shrink:0}button{border:0;background:transparent;color:#343948;width:28px;height:28px;border-radius:9px;font-size:21px;cursor:pointer}button:hover{background:#fff9}button:focus-visible{outline:2px solid #f7a64c}button[aria-pressed=false]{opacity:.4}nav i{height:12px;width:1px;background:#89909b33}body[data-state=happy] #motion{animation:hop .6s ease-in-out 2}body[data-state=thinking] #motion{animation:ponder 2.4s ease-in-out infinite}body[data-state=listening] #motion{animation:listen 1.8s ease-in-out infinite}body[data-state=sleepy] #motion{animation:breathe 5s ease-in-out infinite}
+@keyframes breathe{50%{transform:translateY(-2px) scaleY(1.014)}}@keyframes hop{50%{transform:translateY(-9px) rotate(4deg)}}@keyframes ponder{50%{transform:rotate(-3deg) translateY(-1px)}}@keyframes listen{50%{transform:rotate(2deg)}}@media(prefers-reduced-motion:reduce){#motion{animation:none!important}#sprite{transition:none}}
+
+body.preview{width:300px;height:300px;margin:24px auto;}
+
+/* Display-refresh-rate movement; sprite poses carry actual in-between artwork. */
+#mouthOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:0;transform:translateX(var(--lean)) rotate(var(--look));transition:transform .3s}
+#motion{will-change:transform;animation:breathe 3.8s cubic-bezier(.37,0,.63,1) infinite}
+#sprite{image-rendering:auto}
+body[data-state=happy] #motion{animation:soft-hop .8s cubic-bezier(.37,0,.63,1) 2}
+@keyframes soft-hop{0%,100%{transform:translateY(0) scale(1)}25%{transform:translateY(2px) scale(1.02,.98)}55%{transform:translateY(-7px) rotate(2deg)}80%{transform:translateY(0) scale(.995,1.005)}}
+@media(prefers-reduced-motion:reduce){#mouthOverlay{transition:none}}
+
+/* Compact, high-contrast controls on either light or dark desktop wallpaper. */
+nav{height:34px;gap:3px;padding:3px 6px;border-radius:14px;background:rgba(255,255,255,.9);border:1px solid rgba(255,255,255,.65);box-shadow:0 2px 8px #18202e12;backdrop-filter:blur(14px)}
+nav button{display:grid;place-items:center;width:28px;height:26px;color:#52596a;border-radius:9px;transition:background .15s,color .15s,transform .15s}
+nav button svg{width:17px;height:17px}nav button:hover{background:#edf0f5;color:#252c39}nav button:active{transform:scale(.93)}
+nav button[aria-pressed=true]{color:#b86a20;background:#fff1df}nav button[aria-pressed=false]{opacity:1;color:#9299a4}
+nav i{margin:0 2px;height:13px;background:#dce0e6}
+/* Keyboard focus and the muted microphone remain legible on the white toolbar. */
+nav button[aria-pressed=false]{color:#626a78}
+nav button:focus-visible{outline:2px solid #8d4b10;outline-offset:2px}
+@media(prefers-reduced-transparency:reduce){nav{background:#fff;backdrop-filter:none}}
+@media(forced-colors:active){nav{background:Canvas;border-color:ButtonText}nav button,nav button[aria-pressed]{color:ButtonText;background:Canvas}nav button:focus-visible{outline-color:Highlight}}

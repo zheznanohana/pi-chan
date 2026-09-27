@@ -1,0 +1,2316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>π-chan Studio | Live2D Agent & Jev Cognitive Emotion Director</title>
+  <style>
+    :root {
+      --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      
+      /* π-chan Character Techwear Color Architecture */
+      --bg-deep: #07080d;
+      --bg-surface: rgba(13, 16, 25, 0.82);
+      --bg-surface-elevated: rgba(20, 24, 38, 0.90);
+      
+      /* Signature Cyber Orange & Amber Accents */
+      --orange-core: #ff7a00;
+      --orange-bright: #ff9500;
+      --orange-deep: #ea580c;
+      --orange-glow: rgba(255, 122, 0, 0.35);
+      --amber-light: #fbbf24;
+      --amber-warm: #f59e0b;
+      
+      /* Platinum Silver & Porcelain Whites (Hair & Inner Top) */
+      --silver-white: #f8fafc;
+      --silver-ash: #e2e8f0;
+      --silver-muted: #94a3b8;
+      --silver-dark: #64748b;
+      
+      /* Tactical Border & High-Refraction Rim Highlights */
+      --glass-border: rgba(255, 140, 0, 0.22);
+      --glass-border-subtle: rgba(255, 255, 255, 0.10);
+      --glass-highlight: rgba(255, 255, 255, 0.16);
+      
+      /* Semantic Status Indicators */
+      --status-emerald: #10b981;
+      --status-rose: #f43f5e;
+      --status-cyan: #06b6d4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: var(--font-system);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-deep);
+      color: var(--silver-white);
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* Dynamic Real-time Pi Agent Stream Background Canvas */
+    .bg-stream-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* -------------------------------------------------------------------------
+       Apple HIG Liquid Glass Surface Discipline (Obsidian & Cyber Orange Rim)
+    ------------------------------------------------------------------------- */
+    .liquid-glass {
+      background: var(--bg-surface);
+      backdrop-filter: blur(32px) saturate(190%);
+      -webkit-backdrop-filter: blur(32px) saturate(190%);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), inset 0 1px 0 var(--glass-highlight), inset 0 0 20px rgba(255, 122, 0, 0.03);
+    }
+
+    /* Top Floating Dynamic Island */
+    .top-nav {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      right: 20px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-radius: 9999px;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--orange-core), var(--orange-deep));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 900;
+      color: #fff;
+      box-shadow: 0 0 16px var(--orange-glow);
+    }
+
+    .brand-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-size: 0.94rem;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      color: var(--silver-white);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-tag {
+      font-size: 0.62rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: rgba(255, 122, 0, 0.2);
+      border: 1px solid rgba(255, 122, 0, 0.4);
+      color: var(--orange-bright);
+      font-family: var(--font-mono);
+    }
+
+    .brand-sub {
+      font-size: 0.68rem;
+      color: var(--silver-muted);
+      font-family: var(--font-mono);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border-subtle);
+      color: var(--silver-white);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .nav-pill:hover {
+      background: rgba(255, 122, 0, 0.12);
+      border-color: rgba(255, 122, 0, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .nav-pill.active-director {
+      background: rgba(255, 122, 0, 0.16);
+      border-color: rgba(255, 122, 0, 0.45);
+      color: var(--amber-light);
+    }
+
+    .pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--status-emerald);
+      box-shadow: 0 0 8px var(--status-emerald);
+    }
+
+    /* -------------------------------------------------------------------------
+       Center Stage: Galgame Character Live2D Arena
+    ------------------------------------------------------------------------- */
+    .stage-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .ambient-halo {
+      position: absolute;
+      top: 22%;
+      width: 540px;
+      height: 540px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 122, 0, 0.16) 0%, rgba(245, 158, 11, 0.06) 40%, transparent 70%);
+      filter: blur(55px);
+      pointer-events: none;
+      opacity: 0.35;
+      animation: breathe-glow 4s ease-in-out infinite alternate;
+    }
+
+    .live2d-stage {
+      width: 100%;
+      max-width: 960px;
+      height: calc(100vh - 120px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      pointer-events: auto;
+    }
+
+    .live2d-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+      filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.75));
+    }
+
+    .live2d-canvas:active {
+      cursor: grabbing;
+    }
+
+    .stage-loader {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: var(--orange-bright);
+      font-size: 0.88rem;
+      font-weight: 600;
+      pointer-events: none;
+      transition: opacity 0.5s;
+    }
+
+    .loader-spin {
+      width: 38px;
+      height: 38px;
+      border: 3px solid rgba(255, 122, 0, 0.2);
+      border-top-color: var(--orange-core);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    /* -------------------------------------------------------------------------
+       Bottom Galgame Dialogue Box (Tactical Obsidian & Cyber Orange)
+    ------------------------------------------------------------------------- */
+    .galgame-dialog-wrapper {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(1120px, calc(100vw - 44px));
+      max-height: calc(100vh - 76px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 50;
+      pointer-events: none;
+    }
+
+    .dialog-box, .result-dock-panel {
+      pointer-events: auto;
+    }
+
+    .dialog-box {
+      border-radius: 26px;
+      padding: 1.25rem 1.75rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      position: relative;
+      background: var(--bg-surface);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75), inset 0 1px 0 var(--glass-highlight), inset 0 0 24px rgba(255, 122, 0, 0.04);
+    }
+
+    /* Dialogue Header Row: Nameplate + Jev Emotion Director Badge */
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .character-nameplate {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 15px;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, rgba(255, 122, 0, 0.26), rgba(234, 88, 12, 0.16));
+      border: 1px solid rgba(255, 122, 0, 0.45);
+      box-shadow: 0 0 14px rgba(255, 122, 0, 0.18);
+    }
+
+    .nameplate-icon {
+      font-size: 0.9rem;
+      color: #ff9500;
+    }
+
+    .nameplate-title {
+      font-size: 0.86rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.3px;
+    }
+
+    .nameplate-badge {
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(255, 122, 0, 0.3);
+      border: 1px solid rgba(255, 122, 0, 0.4);
+      color: #fed7aa;
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    /* Real-time Jev Emotion Director Pill */
+    .jev-emotion-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.30);
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--amber-light);
+      font-family: var(--font-mono);
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+    }
+
+    /* Thinking / Silent Reasoning Bubble */
+    .reasoning-bubble {
+      display: none;
+      padding: 8px 14px;
+      background: rgba(245, 158, 11, 0.10);
+      border: 1px solid rgba(245, 158, 11, 0.28);
+      border-radius: 12px;
+      font-size: 0.82rem;
+      color: var(--amber-light);
+      align-items: center;
+      gap: 8px;
+      animation: pulse-soft 2s infinite alternate;
+    }
+
+    .reasoning-bubble.active {
+      display: flex;
+    }
+
+    /* Main Dialogue Text Display & Markdown Architecture */
+    .dialogue-text {
+      font-size: 0.98rem;
+      line-height: 1.65;
+      color: var(--silver-white);
+      min-height: 52px;
+      max-height: 280px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      white-space: normal;
+      word-break: break-word;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 122, 0, 0.4) transparent;
+    }
+
+    .dialogue-text::-webkit-scrollbar,
+    .dialogue-text pre::-webkit-scrollbar,
+    .dialogue-text .table-wrapper::-webkit-scrollbar,
+    .result-panel-body::-webkit-scrollbar,
+    .result-tool-pre::-webkit-scrollbar,
+    .markdown-content pre::-webkit-scrollbar,
+    .markdown-content .table-wrapper::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .dialogue-text::-webkit-scrollbar-track,
+    .dialogue-text pre::-webkit-scrollbar-track,
+    .dialogue-text .table-wrapper::-webkit-scrollbar-track,
+    .result-panel-body::-webkit-scrollbar-track,
+    .result-tool-pre::-webkit-scrollbar-track,
+    .markdown-content pre::-webkit-scrollbar-track,
+    .markdown-content .table-wrapper::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 3px;
+    }
+
+    .dialogue-text::-webkit-scrollbar-thumb,
+    .dialogue-text pre::-webkit-scrollbar-thumb,
+    .dialogue-text .table-wrapper::-webkit-scrollbar-thumb,
+    .result-panel-body::-webkit-scrollbar-thumb,
+    .result-tool-pre::-webkit-scrollbar-thumb,
+    .markdown-content pre::-webkit-scrollbar-thumb,
+    .markdown-content .table-wrapper::-webkit-scrollbar-thumb {
+      background: rgba(255, 122, 0, 0.35);
+      border-radius: 3px;
+    }
+
+    .dialogue-text::-webkit-scrollbar-thumb:hover,
+    .dialogue-text pre::-webkit-scrollbar-thumb:hover,
+    .dialogue-text .table-wrapper::-webkit-scrollbar-thumb:hover,
+    .result-panel-body::-webkit-scrollbar-thumb:hover,
+    .result-tool-pre::-webkit-scrollbar-thumb:hover,
+    .markdown-content pre::-webkit-scrollbar-thumb:hover,
+    .markdown-content .table-wrapper::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 122, 0, 0.6);
+    }
+
+    /* Paragraphs */
+    .dialogue-text p, .markdown-content p {
+      margin: 6px 0;
+      line-height: 1.65;
+    }
+    .dialogue-text p:first-child, .markdown-content p:first-child {
+      margin-top: 0;
+    }
+    .dialogue-text p:last-child, .markdown-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Headings (h1 to h6) */
+    .dialogue-text h1, .dialogue-text h2, .dialogue-text h3,
+    .dialogue-text h4, .dialogue-text h5, .dialogue-text h6,
+    .markdown-content h1, .markdown-content h2, .markdown-content h3,
+    .markdown-content h4, .markdown-content h5, .markdown-content h6 {
+      color: #fff;
+      font-weight: 700;
+      margin: 10px 0 4px;
+      line-height: 1.35;
+    }
+    .dialogue-text h1:first-child, .dialogue-text h2:first-child, .dialogue-text h3:first-child,
+    .markdown-content h1:first-child, .markdown-content h2:first-child, .markdown-content h3:first-child {
+      margin-top: 0;
+    }
+    .dialogue-text h1, .markdown-content h1 {
+      font-size: 1.3rem;
+      border-bottom: 1px solid rgba(255, 122, 0, 0.28);
+      padding-bottom: 4px;
+    }
+    .dialogue-text h2, .markdown-content h2 {
+      font-size: 1.15rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 3px;
+    }
+    .dialogue-text h3, .markdown-content h3 {
+      font-size: 1.05rem;
+      color: var(--amber-light);
+    }
+    .dialogue-text h4, .markdown-content h4 { font-size: 0.98rem; }
+    .dialogue-text h5, .markdown-content h5 { font-size: 0.92rem; color: var(--silver-ash); }
+    .dialogue-text h6, .markdown-content h6 { font-size: 0.85rem; color: var(--silver-muted); }
+
+    /* Bold, Italic, Strikethrough */
+    .dialogue-text strong, .markdown-content strong {
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .dialogue-text em, .markdown-content em {
+      font-style: italic;
+      color: #fed7aa;
+    }
+    .dialogue-text del, .markdown-content del {
+      text-decoration: line-through;
+      color: var(--silver-muted);
+    }
+
+    /* Lists & Nested Lists */
+    .dialogue-text ul, .dialogue-text ol,
+    .markdown-content ul, .markdown-content ol {
+      margin: 6px 0;
+      padding-left: 22px;
+    }
+    .dialogue-text li, .markdown-content li {
+      margin: 3px 0;
+      line-height: 1.6;
+    }
+    .dialogue-text li > ul, .dialogue-text li > ol,
+    .markdown-content li > ul, .markdown-content li > ol {
+      margin: 2px 0 2px 4px;
+      padding-left: 18px;
+    }
+
+    /* Inline Code */
+    .dialogue-text code:not(pre code), .markdown-content code:not(pre code) {
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+      background: rgba(255, 122, 0, 0.12);
+      border: 1px solid rgba(255, 122, 0, 0.28);
+      color: #fed7aa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      word-break: break-all;
+    }
+
+    /* Fenced Code Blocks (Dark low contrast with language badge) */
+    .dialogue-text .code-block-wrapper, .markdown-content .code-block-wrapper {
+      margin: 8px 0;
+      background: rgba(10, 13, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    }
+
+    .dialogue-text .code-header, .markdown-content .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .dialogue-text .code-lang, .markdown-content .code-lang {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--silver-muted);
+      text-transform: lowercase;
+      letter-spacing: 0.5px;
+    }
+
+    .dialogue-text pre, .markdown-content pre {
+      margin: 0;
+      padding: 8px 12px;
+      overflow-x: auto;
+      max-width: 100%;
+      background: transparent;
+    }
+
+    .dialogue-text pre code, .markdown-content pre code {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.55;
+      color: #e2e8f0;
+      background: transparent;
+      border: none;
+      padding: 0;
+      white-space: pre;
+      display: block;
+    }
+
+    /* Tables */
+    .dialogue-text .table-wrapper, .markdown-content .table-wrapper {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      margin: 8px 0;
+    }
+
+    .dialogue-text table, .markdown-content table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.88rem;
+      background: rgba(14, 18, 28, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .dialogue-text th, .dialogue-text td,
+    .markdown-content th, .markdown-content td {
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      padding: 6px 12px;
+      text-align: left;
+    }
+
+    .dialogue-text th, .markdown-content th {
+      background: rgba(255, 122, 0, 0.15);
+      color: var(--amber-light);
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.3px;
+    }
+
+    .dialogue-text tr:nth-child(even) td, .markdown-content tr:nth-child(even) td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .dialogue-text tr:hover td, .markdown-content tr:hover td {
+      background: rgba(255, 122, 0, 0.06);
+    }
+
+    /* Blockquotes */
+    .dialogue-text blockquote, .markdown-content blockquote {
+      margin: 8px 0;
+      padding: 6px 12px;
+      border-left: 3px solid var(--orange-core);
+      background: rgba(255, 122, 0, 0.06);
+      border-radius: 0 6px 6px 0;
+      color: var(--silver-ash);
+    }
+
+    .dialogue-text blockquote p, .markdown-content blockquote p {
+      margin: 2px 0;
+    }
+
+    /* External Links */
+    .dialogue-text a, .markdown-content a {
+      color: var(--amber-light);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 0.15s ease;
+      cursor: pointer;
+    }
+
+    .dialogue-text a:hover, .markdown-content a:hover {
+      color: var(--orange-bright);
+    }
+
+    /* Horizontal Rules */
+    .dialogue-text hr, .markdown-content hr {
+      border: none;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      margin: 10px 0;
+    }
+
+    /* -------------------------------------------------------------------------
+       Bottom Independent Result Area (结果区置底)
+    ------------------------------------------------------------------------- */
+    .result-dock-panel {
+      border-radius: 18px;
+      background: rgba(9, 13, 20, 0.94);
+      border: 1px solid rgba(56, 189, 248, 0.24);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .result-dock-panel.is-empty {
+      display: none !important;
+    }
+
+    .result-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .result-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .result-status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+      box-shadow: 0 0 8px rgba(52, 211, 153, 0.6);
+      transition: all 0.2s ease;
+      display: inline-block;
+    }
+
+    .result-status-indicator.running {
+      background: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+      animation: pulse-soft 1s infinite alternate;
+    }
+
+    .result-status-indicator.error {
+      background: #f43f5e;
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.8);
+    }
+
+    .result-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      letter-spacing: 0.5px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .result-badge {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(52, 211, 153, 0.15);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: #34d399;
+    }
+
+    .result-badge.running {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+    }
+
+    .result-badge.subtle {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: var(--silver-muted);
+    }
+
+    .result-badge.tool-badge {
+      background: rgba(255, 122, 0, 0.15);
+      border-color: rgba(255, 122, 0, 0.35);
+      color: #fed7aa;
+    }
+
+    .result-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .result-action-btn {
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 0.70rem;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--silver-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .result-action-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .result-panel-body {
+      padding: 12px 18px 14px;
+      max-height: 240px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .result-sub-header {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--silver-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .result-sub-header::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .result-tool-item {
+      background: rgba(4, 7, 14, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+
+    .result-tool-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 10px;
+      background: rgba(255, 255, 255, 0.03);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+    }
+
+    .result-tool-name {
+      color: #38bdf8;
+      font-weight: 700;
+    }
+
+    .result-tool-cmd {
+      color: #cbd5e1;
+      margin-left: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 500px;
+    }
+
+    .result-tool-status {
+      font-size: 0.68rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .result-tool-status.ok {
+      background: rgba(52, 211, 153, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.4);
+    }
+
+    .result-tool-status.fail {
+      background: rgba(244, 63, 94, 0.2);
+      color: #f43f5e;
+      border: 1px solid rgba(244, 63, 94, 0.4);
+    }
+
+    .result-tool-pre {
+      margin: 0;
+      padding: 8px 10px;
+      max-height: 110px;
+      overflow: auto;
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      line-height: 1.5;
+      color: #94a3b8;
+      background: rgba(2, 4, 8, 0.95);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .result-markdown-content {
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: var(--silver-white);
+      word-break: break-word;
+    }
+
+    .tool-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin: 4px 0;
+      padding: 4px 11px;
+      background: rgba(255, 122, 0, 0.12);
+      border: 1px solid rgba(255, 122, 0, 0.28);
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #fed7aa;
+    }
+
+    /* Integrated Prompt Bar */
+    .prompt-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    /* -------------------------------------------------------------------------
+       Voice Mode & Real-Time ASR / TTS Styling (Zero Emoji)
+    ------------------------------------------------------------------------- */
+    .mic-button {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border-subtle);
+      color: var(--silver-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .mic-button:hover {
+      background: rgba(255, 122, 0, 0.16);
+      border-color: rgba(255, 122, 0, 0.45);
+      color: var(--orange-bright);
+      transform: translateY(-1px);
+    }
+
+    .mic-button.active {
+      background: rgba(255, 122, 0, 0.2);
+      border-color: var(--orange-core);
+      color: var(--orange-bright);
+      box-shadow: 0 0 16px var(--orange-glow);
+    }
+
+    .mic-button.recording {
+      background: rgba(239, 68, 68, 0.22);
+      border-color: #ef4444;
+      color: #fca5a5;
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.5);
+      animation: mic-pulse 1.2s infinite;
+    }
+
+    .mic-svg-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    @keyframes mic-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 14px rgba(239, 68, 68, 0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 0 22px rgba(239, 68, 68, 0.7); }
+    }
+
+    .voice-status-bar {
+      background: rgba(10, 14, 22, 0.94);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 14px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      font-size: 0.82rem;
+      min-height: 42px;
+    }
+
+    .voice-status-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .voice-status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--status-emerald);
+      box-shadow: 0 0 8px var(--status-emerald);
+      transition: all 0.2s ease;
+    }
+
+    .voice-status-dot.recording {
+      background: #ef4444;
+      box-shadow: 0 0 10px #ef4444;
+      animation: pulse-soft 0.8s infinite alternate;
+    }
+
+    .voice-status-dot.speaking {
+      background: #38bdf8;
+      box-shadow: 0 0 10px #38bdf8;
+      animation: pulse-soft 0.8s infinite alternate;
+    }
+
+    .voice-status-dot.sending {
+      background: var(--orange-core);
+      box-shadow: 0 0 10px var(--orange-core);
+    }
+
+    .voice-status-title {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      white-space: nowrap;
+    }
+
+    .voice-meter-wrapper {
+      width: 64px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .voice-meter-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #10b981 0%, #38bdf8 65%, #f59e0b 85%, #ef4444 100%);
+      transition: width 0.05s ease-out;
+    }
+
+    .voice-latency-pill {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: #38bdf8;
+      white-space: nowrap;
+    }
+
+    .voice-transcript-wrapper {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .voice-transcript-label {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: var(--silver-muted);
+      flex-shrink: 0;
+    }
+
+    .voice-transcript-text {
+      font-size: 0.85rem;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      white-space: nowrap;
+      color: var(--silver-ash);
+    }
+
+    .voice-transcript-text.partial {
+      color: #38bdf8;
+      font-style: italic;
+    }
+
+    .voice-transcript-text.final {
+      color: #ffffff;
+      font-style: normal;
+      font-weight: 600;
+    }
+
+    .voice-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 13px;
+      background: #38bdf8;
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink-cursor 0.7s infinite;
+    }
+
+    @keyframes blink-cursor {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .voice-status-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .voice-tool-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border-subtle);
+      color: var(--silver-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .voice-tool-btn:hover {
+      background: rgba(255, 122, 0, 0.15);
+      border-color: rgba(255, 122, 0, 0.35);
+      color: #fff;
+    }
+
+    .voice-svg-icon {
+      width: 12px;
+      height: 12px;
+    }
+
+    .voice-tts-badge {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      color: #4ade80;
+      white-space: nowrap;
+    }
+
+    .voice-notice {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      color: #fed7aa;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 0.76rem;
+      line-height: 1.4;
+      font-family: var(--font-mono);
+    }
+
+    .prompt-input {
+      flex: 1;
+      height: 44px;
+      background: rgba(8, 10, 16, 0.65);
+      border: 1px solid rgba(255, 140, 0, 0.22);
+      border-radius: 14px;
+      padding: 0 16px;
+      color: var(--silver-white);
+      font-size: 0.92rem;
+      outline: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .prompt-input:focus {
+      border-color: var(--orange-core);
+      background: rgba(12, 15, 24, 0.85);
+      box-shadow: 0 0 18px rgba(255, 122, 0, 0.25);
+    }
+
+    .prompt-input::placeholder {
+      color: var(--silver-dark);
+    }
+
+    .send-button {
+      height: 44px;
+      padding: 0 22px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--orange-core), var(--orange-deep));
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.88rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 18px rgba(255, 122, 0, 0.40);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .send-button:hover {
+      opacity: 0.94;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 22px rgba(255, 122, 0, 0.55);
+    }
+
+    .send-button:active {
+      transform: translateY(1px);
+    }
+
+    /* Floating Quick Action Bar */
+    .quick-chips {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 0;
+    }
+
+    .chip-btn {
+      padding: 6px 13px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--glass-border-subtle);
+      color: var(--silver-muted);
+      font-size: 0.74rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .chip-btn:hover {
+      background: rgba(255, 122, 0, 0.18);
+      border-color: rgba(255, 122, 0, 0.45);
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 0 12px rgba(255, 122, 0, 0.2);
+    }
+
+    /* Keyframes */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse-soft {
+      0% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    @keyframes breathe-glow {
+      0% { transform: scale(0.96); opacity: 0.75; }
+      100% { transform: scale(1.04); opacity: 1.0; }
+    }
+
+    .runtime-panel{position:absolute;right:26px;top:116px;width:236px;z-index:30;padding:18px;border-radius:18px;pointer-events:auto}
+    .runtime-panel header{display:flex;align-items:center;gap:9px;margin-bottom:16px;font-size:13px}.runtime-panel small{margin-left:auto;font:10px var(--font-mono);color:#8b97a7;letter-spacing:1px}
+    .runtime-row{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-top:1px solid #ffffff0b;font-size:12px;color:#98a3b1}.runtime-row b{font-weight:500;color:#e5e9ef;max-width:126px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .runtime-note{margin-top:12px;padding-top:12px;border-top:1px solid #ffffff12;color:#7c8a9b;font-size:11px;line-height:1.7}
+    .reply-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:7px;color:#8491a1;font-size:11px}.reply-toolbar>span{margin-right:auto}.reply-toolbar .chip-btn{font-size:11px;padding:4px 9px}
+    .reading-expanded .dialogue-text{max-height:62vh;min-height:250px}.dialogue-text:empty:before{content:'在下方输入，或打开语音模式开始对话。';color:#7c8a9b}
+    @media(min-width:1200px){.live2d-stage{transform:translateX(-90px)}}
+    @media(max-width:1100px){.runtime-panel{width:190px;right:16px;padding:14px;top:110px}.runtime-row{font-size:11px}}
+    @media(max-width:850px){.runtime-panel{display:none}}
+
+    .history-sidebar{position:absolute;left:18px;top:116px;bottom:18px;width:216px;z-index:35;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:14px}
+    .history-title{display:flex;justify-content:space-between;align-items:center;font-size:14px}.history-title .chip-btn{font-size:10px;padding:4px 7px}.history-new{border:1px solid #ffb35a33;background:#ffb35a10;color:#ffc37d;border-radius:10px;padding:11px;text-align:left;cursor:pointer;font:inherit;font-size:13px}.history-new span{margin-right:8px}.history-project{font-size:11px;color:#6f7e90;letter-spacing:.5px}
+    #historyList{flex:1;min-height:0;overflow:auto}.history-item{display:block;width:100%;background:transparent;color:#adb8c5;border:0;border-radius:9px;padding:11px 10px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;cursor:pointer;margin-bottom:3px}.history-item:hover{background:#ffffff08}.history-item.active{background:#ffffff10;color:#f1f4f8}#historyNotice{font-size:10px;color:#79889b;line-height:1.6}
+    .history-message{padding:12px 0;border-bottom:1px solid #ffffff0a}.history-message-role{display:block;color:#ffba6a;margin-bottom:7px;font-size:11px}.activity-heading{font-size:11px;color:#8592a3;letter-spacing:.5px;margin-top:16px}.agent-activity{padding:10px 0;border-bottom:1px solid #ffffff0a;font-size:11px}.agent-activity strong{font-weight:500;color:#c6d0dc}.agent-activity small{float:right;color:#e9aa61}.agent-activity p{clear:both;margin-top:7px;color:#8492a4;line-height:1.5;max-height:42px;overflow:hidden}.runtime-panel{max-height:calc(100vh - 140px);overflow:auto}
+    @media(min-width:1101px){.galgame-dialog-wrapper{width:calc(100vw - 530px);max-width:1000px;left:calc(50% - 14px)}}
+    @media(max-width:1100px){.history-sidebar{width:170px;left:12px;padding:12px}.runtime-panel{display:none}.galgame-dialog-wrapper{left:calc(50% + 94px);width:calc(100vw - 220px)}}
+    @media(max-width:720px){.history-sidebar{display:none}.galgame-dialog-wrapper{left:50%;width:calc(100vw - 24px)}.reply-toolbar{flex-wrap:wrap}}
+  </style>
+  <link rel="stylesheet" href="./settings-panel.css">
+  <link rel="stylesheet" href="./workbench-panel.css">
+  <link rel="stylesheet" href="./mcp-panel.css?v=20260923-connect-4">
+  <link rel="stylesheet" href="./memory-panel.css">
+  <link rel="stylesheet" href="./task-board.css">
+  <link rel="stylesheet" href="./studio-theme.css">
+</head>
+<body>
+
+  <!-- Legacy event buffer retained; visible output now has one DOM renderer only. -->
+  <canvas id="bgStreamCanvas" class="bg-stream-canvas" data-renderer="dom" hidden aria-hidden="true"></canvas>
+
+  <!-- Floating Dynamic Island (Apple HIG Liquid Glass & Cyber Orange) -->
+  <nav class="top-nav liquid-glass" aria-label="工作区工具栏">
+    <div class="brand">
+      <div class="brand-icon">π</div>
+      <div class="brand-info">
+        <div class="brand-name">
+          <span>π-chan Studio</span>
+          <span class="brand-tag">v2.0 MASTER</span>
+        </div>
+        <span class="brand-sub">Pi Coding Harness · Live2D Cubism · Jev Director</span>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <div class="nav-pill" id="harnessBadge">
+        <span class="pill-dot"></span>
+        <span id="harnessStatusText">Pi RPC Harness Connected</span>
+      </div>
+      <div class="nav-pill active-director" id="jevDirectorBadge">
+        <span>Jev 情绪中枢: 默认待机 (0.95)</span>
+      </div>
+      <button type="button" class="nav-pill" onclick="switchFraming()" aria-label="切换人物取景">
+        <span id="framingLabel">半身视角</span>
+      </button>
+    </div>
+  </nav>
+
+  <aside class="history-sidebar liquid-glass" aria-label="对话历史">
+    <div class="history-title"><strong>对话</strong><button type="button" class="chip-btn" id="historyRefreshBtn" aria-label="刷新对话历史">刷新</button></div>
+    <button type="button" class="history-new" id="newConversationBtn"><span>＋</span> 新对话</button>
+    <div class="history-project">π · 本地工作区</div>
+    <div id="historyList"></div><small id="historyNotice">正在加载真实会话…</small>
+  </aside>
+  <section class="background-reading" aria-label="背景对话阅读区">
+  <!-- One real Markdown stream, on the stage rather than duplicated in the composer. -->
+      <div class="reply-toolbar"><span>对话</span><button type="button" class="chip-btn" id="resumeReadingBtn" hidden>回到最新</button><button type="button" class="chip-btn reader-icon-button" id="copyReplyBtn" aria-label="复制原文" title="复制原文"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M15 8V4H4v11h4"/></svg></button><button type="button" class="chip-btn reader-icon-button" id="expandReplyBtn" aria-expanded="false" aria-label="展开阅读" title="展开阅读"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 4H4v5M15 4h5v5M4 15v5h5M20 15v5h-5"/></svg></button></div>
+      <div class="dialogue-text" id="dialogueText" role="region" aria-label="对话内容" tabindex="0"></div>
+
+  </section>
+  <!-- Center Stage: Galgame Character Live2D Arena -->
+  <div class="stage-container">
+    <div class="ambient-halo"></div>
+    <div class="live2d-stage" id="live2dStage">
+      <canvas id="live2dCanvas" class="live2d-canvas"></canvas>
+      <div id="stageLoader" class="stage-loader">
+        <div class="loader-spin"></div>
+        <span>唤醒 Live2D 派娘实体...</span>
+      </div>
+    </div>
+  </div>
+
+  <aside class="runtime-panel liquid-glass" aria-label="运行状态">
+    <header><span class="pill-dot"></span><strong>运行状态</strong><small>LIVE</small></header>
+    <div class="runtime-row"><span>服务连接</span><b id="runtimeConnection">连接中</b></div>
+    <div class="runtime-row"><span>语音输入</span><b id="runtimeInput">麦克风关闭</b></div>
+    <div class="runtime-row"><span>语音输出</span><b id="runtimeOutput">待机</b></div>
+    <div class="runtime-row"><span>当前任务</span><b id="runtimeTask">待机</b></div>
+    <div class="runtime-row"><span>已收音频</span><b id="runtimeAudio">0 KB</b></div>
+    <div class="activity-heading">子 Agent / 工具</div><div id="agentActivity"></div>
+    <div class="runtime-note" id="runtimeDetail">打开语音模式后，可以直接说话打断播报。</div>
+  </aside>
+
+  <!-- Bottom Galgame Dialogue Box (Tactical Obsidian & Cyber Orange) -->
+  <div class="galgame-dialog-wrapper">
+    <div class="dialog-box liquid-glass">
+      
+      <!-- Dialogue Header: Nameplate + Jev Emotion Badge -->
+      <div class="dialog-header">
+        <div class="character-nameplate">
+          <span class="nameplate-icon"></span>
+          <span class="nameplate-title">π-chan (派娘)</span>
+          <span class="nameplate-badge" id="dialogueMood">待机守护中</span>
+        </div>
+        <div class="jev-emotion-tag" id="jevEmotionTag">
+          <span>Jev 实时动作: 呼吸与视线追踪中</span>
+        </div>
+      </div>
+
+      <!-- Silent Reasoning Capsule ("推理过程不说话") -->
+      <div class="reasoning-bubble" id="reasoningBubble">
+        <span></span>
+        <span id="reasoningText">派娘正在深入推演架构与逻辑（思考阶段已静默）...</span>
+      </div>
+
+      <!-- Tool Execution Chips Container -->
+      <div id="toolChipsContainer" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+
+      <!-- Voice Live Status Bar (Zero Emoji) -->
+      <div class="voice-status-bar" id="voiceStatusBar" style="display: none;">
+        <div class="voice-status-left">
+          <span class="voice-status-dot" id="voiceStatusDot"></span>
+          <span class="voice-status-title" id="voiceStatusTitle">语音模式就绪</span>
+          <div class="voice-meter-wrapper" title="实时音量">
+            <div class="voice-meter-fill" id="voiceMeterFill"></div>
+          </div>
+          <span class="voice-latency-pill" id="voiceLatencyPill">延迟: -- ms</span>
+        </div>
+        <div class="voice-transcript-wrapper">
+          <span class="voice-transcript-label">实时转写:</span>
+          <span class="voice-transcript-text" id="voiceTranscriptText">等待语音输入或测试音频...</span>
+        </div>
+        <div class="voice-status-right">
+          <button type="button" class="voice-tool-btn" id="voiceTestAudioBtn" onclick="window.voiceUI && window.voiceUI.playTestSpeech()" title="播放真实中文测试音频 (test-zh.wav)">
+            <svg class="voice-svg-icon" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span>识别样例（会向 Agent 提问）</span>
+          </button>
+          <button type="button" class="voice-tool-btn" id="voiceStatusSettingsBtn" onclick="window.voiceSettings && window.voiceSettings.open()" title="打开语音独立设置">
+            <svg class="voice-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>语音设置</span>
+          </button>
+          <span class="voice-tts-badge" id="voiceTtsBadge">TTS: 待机</span>
+        </div>
+      </div>
+
+      <!-- Voice Notice / Degradation Banner -->
+      <div class="voice-notice" id="voiceNotice" style="display: none;">
+        <span id="voiceNoticeText"></span>
+      </div>
+
+      <!-- Prompt Input Row -->
+      <div class="prompt-row">
+        <button type="button" class="mic-button" id="micBtn" aria-label="开启或关闭实时语音" title="开启/关闭语音模式">
+          <svg class="mic-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </button>
+        <button type="button" class="voice-settings-btn" id="voiceSettingsBtn" aria-label="语音设置" title="语音独立设置 (输入输出/音色/VAD/状态)" onclick="window.voiceSettings && window.voiceSettings.open()">
+          <svg class="voice-settings-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+        <input type="text" id="promptInput" aria-label="发送给小派的消息" class="prompt-input" placeholder="输入开发指令，或点击麦克风开启实时语音模式..." onkeydown="if(event.key==='Enter') sendPrompt()" />
+        <button class="send-button" id="sendBtn" onclick="sendPrompt()">
+          <span>发送</span>
+          <span></span>
+        </button>
+      </div>
+
+      <!-- Existing secondary actions remain accessible without filling the composer. -->
+      <details class="composer-extras"><summary>快捷操作与角色动作</summary>
+      <div class="quick-chips">
+        <button class="chip-btn" onclick="window.voiceSettings && window.voiceSettings.open()">语音设置</button>
+        <button type="button" class="chip-btn" onclick="window.mcpPanel && window.mcpPanel.open()">MCP 工具管理</button>
+        <button type="button" class="chip-btn" onclick="window.mcpPanel && window.mcpPanel.triggerReload()">热重载 MCP</button>
+        <button type="button" class="chip-btn" onclick="window.voiceUI?.testSpeaker()">声音自检</button>
+          <button class="chip-btn" onclick="window.voiceUI && window.voiceUI.playTestSpeech()">语音闭环实测</button>
+        <button class="chip-btn" onclick="quickTask('检查当前工作目录下的文件结构')">检查目录</button>
+        <button class="chip-btn" onclick="quickTask('写一个带测试用例的快速排序算法')">写算法代码</button>
+        <button class="chip-btn" onclick="testJevRoute('重构一个高可用分布式元数据存储系统')">Jev 任务分流测试</button>
+        <button class="chip-btn" onclick="testJevCheck('rm -rf / --no-preserve-root')">Jev 危险命令拦截</button>
+        <button class="chip-btn" onclick="triggerMood('tsundere')">傲娇姿态</button>
+        <button class="chip-btn" onclick="triggerMood('smug')">自信微笑</button>
+        <button class="chip-btn" onclick="triggerMood('happy')">欢快打招呼</button>
+        <button class="chip-btn" onclick="triggerMood('neutral')">默认待机</button>
+      </div>
+      </details>
+
+    </div>
+
+
+  </div>
+
+  <script src="/vendor/marked.min.js"></script>
+  <script src="/vendor/purify.min.js"></script>
+  <script type="module">
+    import { PiChanLive2D } from './live2d-controller.js';
+    import { BackgroundStream } from './background-stream.js';
+    import { MarkdownStreamRenderer } from './markdown-renderer.js';
+    import { ConversationMarkdownRenderer } from './background-markdown.js';
+    import { VoiceUIController } from './voice-ui.js';
+    import { VoiceSettingsPanel } from './settings-panel.js';
+    import { SoullinkEmotionBridge } from './emotion-bridge.js';
+
+    let live2d = null;
+    let voiceUI = null;
+    let voiceSettings = null;
+    let soullinkEmotion = null;
+    let bgStream = null;
+    let markdownRenderer = null;
+    let resultMarkdownRenderer = null;
+    let currentFraming = 'portrait';
+    let fullResponseAccumulator = '';
+    let speechTimer = null;
+    let toolCallsMap = new Map();
+    let toolExecutionCount = 0;
+    let currentTurnStartTime = null;
+
+    async function initApp() {
+      const dialogueEl = document.getElementById('dialogueText');
+      const resultDeliverableEl = document.getElementById('resultMarkdownContent');
+      const resumeReadingBtn = document.getElementById('resumeReadingBtn');
+      dialogueEl.dataset.followOutput = 'true';
+      const setFollowing = following => { dialogueEl.dataset.followOutput = String(following); resumeReadingBtn.hidden = following; };
+      dialogueEl.addEventListener('wheel', event => { if(event.deltaY < 0) setFollowing(false); }, {passive:true});
+      dialogueEl.addEventListener('keydown', event => { if(['ArrowUp','PageUp','Home'].includes(event.key)) setFollowing(false); });
+      dialogueEl.addEventListener('scroll', () => setFollowing(dialogueEl.scrollHeight - dialogueEl.scrollTop - dialogueEl.clientHeight <= 8), {passive:true});
+      resumeReadingBtn.onclick = () => { setFollowing(true); dialogueEl.scrollTop = dialogueEl.scrollHeight; dialogueEl.focus({preventScroll:true}); };
+      // Scrolling on the open character stage also browses the adjacent transcript.
+      document.querySelector('.stage-container').addEventListener('wheel', event => {
+        if(event.ctrlKey || matchMedia('(max-width:760px)').matches || dialogueEl.scrollHeight <= dialogueEl.clientHeight) return;
+        event.preventDefault(); if(event.deltaY < 0) setFollowing(false);
+        const step=event.deltaMode===1?24:event.deltaMode===2?dialogueEl.clientHeight:1;
+        dialogueEl.scrollTop += event.deltaY * step;
+      }, {passive:false});
+
+      markdownRenderer = new ConversationMarkdownRenderer({ targetEl: dialogueEl, Renderer:MarkdownStreamRenderer });
+      // Replies stay in the main dialogue; the duplicate result dock is removed.
+      window.markdownRenderer = markdownRenderer;
+      try{const last=localStorage.getItem('pichan_last_reply');if(last){fullResponseAccumulator=last;markdownRenderer.render(dialogueEl,last,true);}}catch{}
+      document.getElementById('copyReplyBtn').onclick=async()=>{try{await navigator.clipboard.writeText(fullResponseAccumulator||'');}catch{voiceUI?.showNotice('复制失败，请手动选择回复内容。');}};
+      document.getElementById('expandReplyBtn').onclick=e=>{const expanded=document.querySelector('.background-reading').classList.toggle('reading-expanded');e.currentTarget.setAttribute('aria-expanded',String(expanded));const label=expanded?'收起阅读':'展开阅读';e.currentTarget.setAttribute('aria-label',label);e.currentTarget.title=label;};
+      if(new URLSearchParams(location.search).get('preview')==='markdown'){
+        fullResponseAccumulator='# Markdown 已恢复\n\n支持 **粗体**、列表和代码。\n\n- 语音状态\n- 桌宠同步\n\n```js\nconsole.log("Hello, 小派");\n```';
+        markdownRenderer.render(dialogueEl,fullResponseAccumulator,true);
+      }
+      window.resultMarkdownRenderer = resultMarkdownRenderer;
+
+      bgStream = new BackgroundStream('bgStreamCanvas');
+      bgStream.init();
+      window.bgStream = bgStream;
+
+      live2d = new PiChanLive2D('live2dCanvas');
+      window.live2d = live2d;
+
+      voiceUI = new VoiceUIController({ live2d });
+      voiceUI.init();
+      window.voiceUI = voiceUI;
+
+      voiceSettings = new VoiceSettingsPanel({ voiceUI, live2d });
+      voiceSettings.init();
+      window.voiceSettings = voiceSettings;
+
+      const ok = await live2d.init();
+      if (ok) {
+        try {
+          soullinkEmotion = await new SoullinkEmotionBridge({ controller: live2d }).init();
+          soullinkEmotion.start();
+          window.soullinkEmotion = soullinkEmotion;
+          console.log('[Soullink] Continuous emotion runtime active', soullinkEmotion.getStatus());
+        } catch (error) {
+          console.error('[Soullink] Profile/runtime initialization failed:', error);
+        }
+      }
+      const loader = document.getElementById('stageLoader');
+      if (ok && loader) {
+        loader.style.opacity = '0';
+        setTimeout(() => loader.remove(), 400);
+      }
+
+      initEventSource();
+      setInterval(()=>{
+        const v=voiceUI;if(!v)return;
+        document.getElementById('runtimeConnection').textContent=v.wsReady?'已连接':'连接中';
+        document.getElementById('runtimeInput').textContent=v.isRecording?'正在倾听':'麦克风关闭';
+        document.getElementById('runtimeOutput').textContent=v.isTtsPlaying?'正在播报':v.ttsPending?'生成语音中':'待机';
+        document.getElementById('runtimeAudio').textContent=((v.playbackStats?.pcmBytes||0)/1024).toFixed(1)+' KB';
+        document.getElementById('runtimeDetail').textContent=v.speechInterrupted?'上一段已打断，正在听你说话。':v.isTtsPlaying?'现在开口可打断；扬声器回声会先进行匹配过滤。':'中文与英文分段发音，回复保留 Markdown 排版。';
+      },250);
+    }
+
+    if (document.readyState === 'loading') {
+      window.addEventListener('DOMContentLoaded', initApp);
+    } else {
+      initApp();
+    }
+
+    window.addEventListener('pi-development-report',event=>{
+      const task=event.detail;
+      if(task?.sourceSessionId!==window.piActiveSessionId)return;
+      markdownRenderer?.upsertDevelopmentReport(task);
+    });
+    window.restoreConversation=function(messages){
+      if(voiceUI){voiceUI.stopTtsPlayback();voiceUI.agentReplyInProgress=false;}
+      const target=document.getElementById('dialogueText');fullResponseAccumulator='';
+      markdownRenderer?.restore(messages);
+      document.getElementById('resumeReadingBtn').hidden=true;
+      for(const message of messages.filter(m=>m.role==='assistant')){
+        const text=typeof message.content==='string'?message.content:(message.content||[]).filter(c=>c.type==='text').map(c=>c.text||'').join('');
+        if(text)fullResponseAccumulator=text;
+      }
+      localStorage.setItem('pichan_last_reply',fullResponseAccumulator);
+      document.getElementById('runtimeTask').textContent='待机';
+      window.dispatchEvent(new CustomEvent('pi-conversation-restored'));
+    };
+
+    // Framing Switcher (Portrait -> Full -> Face)
+    window.switchFraming = function() {
+      if (!live2d) return;
+      if (currentFraming === 'portrait') {
+        currentFraming = 'full';
+        document.getElementById('framingLabel').innerText = '全身视角';
+      } else if (currentFraming === 'full') {
+        currentFraming = 'face';
+        document.getElementById('framingLabel').innerText = '面部特写';
+      } else {
+        currentFraming = 'portrait';
+        document.getElementById('framingLabel').innerText = '半身视角';
+      }
+      live2d.setView(currentFraming);
+    };
+
+    // -------------------------------------------------------------------------
+    // Jev Cognitive Emotion & Motion Director
+    // -------------------------------------------------------------------------
+    async function evaluateJevEmotion(text, context) {
+      try {
+        const res = await fetch('/api/jev/emotion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, context })
+        });
+        const data = await res.json();
+        const emotion = data.emotion || 'neutral';
+        const confidence = data.confidence || 0.85;
+
+        // Apply to character
+        if (live2d) {
+          live2d.applyJevEmotion(emotion, confidence);
+        }
+        if (soullinkEmotion) {
+          soullinkEmotion.applyJevDecision({
+            mood: emotion,
+            intensity: data.intensity ?? confidence,
+            urgency: data.urgency || 'normal',
+            text
+          });
+        }
+
+        // Update UI badges
+        const jevBadge = document.getElementById('jevDirectorBadge');
+        const jevTag = document.getElementById('jevEmotionTag');
+        const moodEl = document.getElementById('dialogueMood');
+
+        const emotionNames = {
+          smug: '自信微笑',
+          tsundere: '傲娇嘟嘴',
+          thinking: '深思推演',
+          happy: '欢快喜悦',
+          alert: '安全警惕',
+          neutral: '默认待机'
+        };
+
+        const label = emotionNames[emotion] || emotion;
+        jevBadge.innerText = `Jev 情绪中枢: ${label} (${(confidence * 100).toFixed(0)}%)`;
+        jevTag.innerText = `Jev 裁决状态: ${label} | 身体微动与神态同步`;
+        moodEl.innerText = label;
+
+        return emotion;
+      } catch (e) {
+        console.warn('Jev Emotion Director notice:', e);
+        return 'neutral';
+      }
+    }
+
+    // Mood & Expression Trigger
+    window.triggerMood = async function(mood) {
+      if (!live2d) return;
+      
+      const moodLines = {
+        tsundere: '哼……本派娘才不是特意为你写代码的呢！但既然主人请求了，就勉为其难帮你一下吧！',
+        smug: '放心交给我吧！不管是底层内核还是高可用分布式架构，本派娘都能以 99% 的水准搞定！',
+        happy: '主人好呀！今天派娘的状态满格，随时准备好和你一起编写最棒的程序啦~',
+        neutral: '身姿与眼神已恢复自然待机，我会一直静静站在屏幕中央守候主人的指令哦。',
+        thinking: '正在全面推演系统的状态与可能分支……思考阶段派娘会保持绝对静默与专注。'
+      };
+
+      const line = moodLines[mood] || '派娘听从指令中！';
+      if (markdownRenderer) {
+        markdownRenderer.render(document.getElementById('dialogueText'), line, true);
+      } else {
+        document.getElementById('dialogueText').textContent = line;
+      }
+      
+      // Let live2d set mood and actively talk with mouth flapping and body gestures!
+      live2d.setMood(mood);
+      live2d.speakDialogue(line);
+
+      const moodEl = document.getElementById('dialogueMood');
+      const jevBadge = document.getElementById('jevDirectorBadge');
+      const jevTag = document.getElementById('jevEmotionTag');
+
+      const labels = { tsundere: '傲娇嘟嘴', smug: '自信微笑', happy: '欢快喜悦', neutral: '默认待机', thinking: '深思推演' };
+      const label = labels[mood] || mood;
+      moodEl.innerText = label;
+      jevBadge.innerText = `Jev 情绪中枢: ${label} (100%)`;
+      jevTag.innerText = `Jev 驱动表情: ${label} | 说话对口型中`;
+    };
+
+    // -------------------------------------------------------------------------
+    // Connect to Real Pi Coding Agent Harness via SSE (/api/stream)
+    // -------------------------------------------------------------------------
+    function initEventSource() {
+      const evtSource = new EventSource('/api/stream');
+
+      evtSource.onopen = () => {
+        document.getElementById('harnessStatusText').innerText = 'Pi RPC Harness Connected';
+      };
+
+      evtSource.onerror = () => {
+        document.getElementById('harnessStatusText').innerText = 'Reconnecting Harness...';
+      };
+
+      evtSource.onmessage = (event) => {
+        try {
+          const { type, payload } = JSON.parse(event.data);
+          window.dispatchEvent(new CustomEvent('pi-runtime-event',{detail:{type,payload}}));
+          if(type==='session_changed')window.dispatchEvent(new CustomEvent('pi-session-changed',{detail:payload}));
+          if(type==='sessions_changed')window.dispatchEvent(new Event('pi-sessions-changed'));
+          if(type==='mcp_status'||type==='mcp_reloaded')window.dispatchEvent(new CustomEvent('pichan_mcp_event',{detail:{type,payload}}));
+          if(type==='client_reload'||type==='page_reload')location.reload();
+          if (type === 'pi_event') {
+            handlePiEvent(payload);
+          } else if (type === 'runaway_abort') {
+            // 服务端判定失控并已自动 abort，这里把原因显示出来，
+            // 否则用户只会看到任务莫名其妙停了
+            const el = document.getElementById('dialogueText');
+            if (el) {
+              const note = document.createElement('div');
+              note.style.cssText = 'margin-top:10px;padding:9px 12px;border-radius:8px;'
+                + 'background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.35);'
+                + 'color:#fca5a5;font-size:12.5px;';
+              note.textContent = payload && payload.message
+                ? payload.message
+                : '任务已自动中止：检测到失控循环。';
+              el.appendChild(note);
+            }
+            if (typeof setResultStatus === 'function') {
+              setResultStatus('error', '已自动中止（失控循环）');
+            }
+          }
+        } catch (e) {}
+      };
+    }
+
+    let isReceivingFinalText = false;
+    let thinkingInterval = null;
+    const thinkingThoughts = [
+      '派娘正在理解主人的任务需求与架构约束...',
+      '深入推演代码拓扑与最佳算法实现方案...',
+      '检索系统环境上下文与工程依赖关系...',
+      'Jev 认知中枢正在执行安全门禁与语义审查...'
+    ];
+    let thinkingIndex = 0;
+
+    function startThinkingState() {
+      if (thinkingInterval) clearInterval(thinkingInterval);
+      thinkingIndex = 0;
+      const reasoningText = document.getElementById('reasoningText');
+      const reasoningEl = document.getElementById('reasoningBubble');
+      const jevTag = document.getElementById('jevEmotionTag');
+      const jevBadge = document.getElementById('jevDirectorBadge');
+      const moodEl = document.getElementById('dialogueMood');
+
+      reasoningText.innerText = '派娘思考中: ' + thinkingThoughts[0];
+      reasoningEl.classList.add('active');
+      jevTag.innerText = 'Jev 思考神态: 视线上扬凝视 · 侧首专注推演';
+      jevBadge.innerText = 'Jev 情绪中枢: 深入思考推演';
+      moodEl.innerText = '沉思推演';
+
+      if (bgStream) {
+        bgStream.setPhase('thinking');
+      }
+
+      if (live2d) {
+        live2d.stopSpeaking();
+        live2d.setMood('thinking');
+      }
+
+      thinkingInterval = setInterval(() => {
+        thinkingIndex = (thinkingIndex + 1) % thinkingThoughts.length;
+        reasoningText.innerText = '派娘思考中: ' + thinkingThoughts[thinkingIndex];
+      }, 2200);
+    }
+
+    function stopThinkingState() {
+      if (thinkingInterval) {
+        clearInterval(thinkingInterval);
+        thinkingInterval = null;
+      }
+      document.getElementById('reasoningBubble').classList.remove('active');
+    }
+
+    window.startThinkingState = startThinkingState;
+    window.stopThinkingState = stopThinkingState;
+
+    // -------------------------------------------------------------------------
+    // Bottom Result Panel Management (结果区置底)
+    // -------------------------------------------------------------------------
+    function showResultPanel() {
+      const panel = document.getElementById('resultPanel');
+      if (panel) {
+        panel.classList.remove('is-empty');
+      }
+    }
+    window.showResultPanel = showResultPanel;
+
+    function toggleResultPanel() {
+      const body = document.getElementById('resultPanelBody');
+      const btn = document.getElementById('resultToggleBtn');
+      if (!body || !btn) return;
+      if (body.style.display === 'none') {
+        body.style.display = 'flex';
+        btn.innerText = '折叠';
+      } else {
+        body.style.display = 'none';
+        btn.innerText = '展开';
+      }
+    }
+    window.toggleResultPanel = toggleResultPanel;
+
+    function clearResultPanel() {
+      const panel = document.getElementById('resultPanel');
+      const toolList = document.getElementById('resultToolList');
+      const toolSec = document.getElementById('resultToolSection');
+      const delivSec = document.getElementById('resultDeliverableSection');
+      const delivContent = document.getElementById('resultMarkdownContent');
+      const durBadge = document.getElementById('resultDurationBadge');
+      const toolBadge = document.getElementById('resultToolCountBadge');
+      const statusBadge = document.getElementById('resultStatusBadge');
+      const statusDot = document.getElementById('resultStatusDot');
+
+      if (toolList) toolList.innerHTML = '';
+      if (toolSec) toolSec.style.display = 'none';
+      if (delivSec) delivSec.style.display = 'none';
+      if (delivContent) delivContent.innerHTML = '';
+      if (durBadge) durBadge.style.display = 'none';
+      if (toolBadge) {
+        toolBadge.style.display = 'none';
+        toolBadge.innerText = '工具产出: 0';
+      }
+      if (statusBadge) {
+        statusBadge.className = 'result-badge';
+        statusBadge.innerText = '待机空闲';
+      }
+      if (statusDot) {
+        statusDot.className = 'result-status-indicator';
+      }
+      if (resultMarkdownRenderer) {
+        resultMarkdownRenderer.reset();
+      }
+
+      toolCallsMap.clear();
+      toolExecutionCount = 0;
+      currentTurnStartTime = null;
+      if (panel) {
+        panel.classList.add('is-empty');
+      }
+    }
+    window.clearResultPanel = clearResultPanel;
+
+    function setResultStatus(status, text, duration) {
+      const statusDot = document.getElementById('resultStatusDot');
+      const statusBadge = document.getElementById('resultStatusBadge');
+      const durBadge = document.getElementById('resultDurationBadge');
+
+      if (statusDot) {
+        statusDot.className = 'result-status-indicator ' + (status || '');
+      }
+      if (statusBadge) {
+        statusBadge.className = 'result-badge ' + (status || '');
+        statusBadge.innerText = text || (status === 'running' ? '执行中...' : '完成');
+      }
+      if (durBadge) {
+        if (duration !== undefined && duration !== null && duration > 0) {
+          durBadge.style.display = 'inline-block';
+          durBadge.innerText = `${duration}ms`;
+        } else {
+          durBadge.style.display = 'none';
+        }
+      }
+    }
+    window.setResultStatus = setResultStatus;
+
+    function formatToolOutput(res) {
+      if (!res) return '';
+      if (typeof res === 'string') return res;
+      if (res.content && Array.isArray(res.content)) {
+        return res.content.map(c => c.text || '').join('\n');
+      }
+      if (res.stdout !== undefined || res.stderr !== undefined) {
+        return [res.stdout, res.stderr].filter(Boolean).join('\n');
+      }
+      try {
+        return JSON.stringify(res, null, 2);
+      } catch (e) {
+        return String(res);
+      }
+    }
+
+    // 一轮任务动辄几十次工具调用，芯片全堆出来会铺满半个对话框。
+    // 只保留最近 5 个（正在跑的一定留着），更早的折成一个计数芯片。
+    const CHIP_KEEP = 5;
+    function pruneToolChips() {
+      const box = document.getElementById('toolChipsContainer');
+      if (!box) return;
+      const chips = [...box.querySelectorAll('.tool-chip')];
+      const overflow = chips.length - CHIP_KEEP;
+      if (overflow <= 0) {
+        const old = box.querySelector('#toolChipsMore');
+        if (old) old.remove();
+        return;
+      }
+      let more = box.querySelector('#toolChipsMore');
+      if (!more) {
+        more = document.createElement('div');
+        more.id = 'toolChipsMore';
+        more.className = 'tool-chip';
+        more.style.opacity = '0.65';
+        box.insertBefore(more, box.firstChild);
+      }
+      let hidden = 0;
+      for (const c of chips) {
+        if (hidden >= overflow) break;
+        if (c.id === 'toolChipsMore') continue;
+        c.remove();
+        hidden++;
+      }
+      const prev = parseInt(more.dataset.count || '0', 10);
+      more.dataset.count = String(prev + hidden);
+      more.textContent = `+${more.dataset.count} 次调用`;
+    }
+
+    function addToolArtifact({ toolName, cmd, output, isError, duration }) {
+      showResultPanel();
+      const toolSec = document.getElementById('resultToolSection');
+      const toolList = document.getElementById('resultToolList');
+      const toolBadge = document.getElementById('resultToolCountBadge');
+      if (!toolSec || !toolList) return;
+
+      toolSec.style.display = 'block';
+      toolExecutionCount++;
+      if (toolBadge) {
+        toolBadge.style.display = 'inline-block';
+        toolBadge.innerText = `工具产出: ${toolExecutionCount}`;
+      }
+
+      const item = document.createElement('div');
+      item.className = 'result-tool-item';
+
+      const meta = document.createElement('div');
+      meta.className = 'result-tool-meta';
+
+      const left = document.createElement('div');
+      left.style.display = 'flex';
+      left.style.alignItems = 'center';
+      left.style.gap = '6px';
+      left.style.overflow = 'hidden';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'result-tool-name';
+      nameSpan.textContent = `[${toolName}]`;
+
+      const cmdSpan = document.createElement('span');
+      cmdSpan.className = 'result-tool-cmd';
+      cmdSpan.textContent = cmd || '';
+      cmdSpan.title = cmd || '';
+
+      left.appendChild(nameSpan);
+      left.appendChild(cmdSpan);
+
+      const right = document.createElement('div');
+      right.style.display = 'flex';
+      right.style.alignItems = 'center';
+      right.style.gap = '6px';
+
+      if (duration !== undefined && duration !== null) {
+        const durSpan = document.createElement('span');
+        durSpan.className = 'result-badge subtle';
+        durSpan.textContent = `${duration}ms`;
+        right.appendChild(durSpan);
+      }
+
+      const statusSpan = document.createElement('span');
+      statusSpan.className = `result-tool-status ${isError ? 'fail' : 'ok'}`;
+      statusSpan.textContent = isError ? 'ERROR' : 'OK';
+      right.appendChild(statusSpan);
+
+      meta.appendChild(left);
+      meta.appendChild(right);
+      item.appendChild(meta);
+
+      // 原始输出不进结果区 —— 背景流里已经在逐行显示了，这里再铺一遍
+      // 会把整个文件内容糊在最底部（之前 stop.py 的源码就是这么冒出来的）。
+      // 只在出错时留一小段摘要，方便定位。
+      if (isError && output && output.trim()) {
+        const pre = document.createElement('pre');
+        pre.className = 'result-tool-pre';
+        const t = output.trim();
+        pre.textContent = t.length > 300 ? t.slice(0, 300) + ' …' : t;
+        item.appendChild(pre);
+      }
+
+      toolList.appendChild(item);
+    }
+    window.addToolArtifact = addToolArtifact;
+
+    function showResultDeliverable(markdownText) {
+      if (!markdownText || !markdownText.trim()) return;
+      showResultPanel();
+      const delivSec = document.getElementById('resultDeliverableSection');
+      const delivContent = document.getElementById('resultMarkdownContent');
+      if (!delivSec || !delivContent) return;
+
+      delivSec.style.display = 'block';
+      if (resultMarkdownRenderer) {
+        resultMarkdownRenderer.render(delivContent, markdownText, false);
+      } else {
+        delivContent.textContent = markdownText;
+      }
+    }
+    window.showResultDeliverable = showResultDeliverable;
+
+    function handlePiEvent(ev) {
+      window.dispatchEvent(new CustomEvent('pi-live-event',{detail:ev}));
+      const status=document.getElementById('runtimeTask');
+      if(ev.type==='agent_start')status.textContent='思考中';
+      if(ev.type==='tool_execution_start'||ev.type==='tool_call_start')status.textContent=ev.toolName||'执行工具';
+      if(ev.type==='agent_end'||ev.type==='agent_settled')status.textContent='已完成';
+      // Preserve user messages from voice/pet/other clients; acknowledge local optimistic echoes.
+      if(ev.type==='message_start' && ev.message?.role==='user'){
+        const text=typeof ev.message.content==='string'?ev.message.content:(ev.message.content||[]).filter(c=>c.type==='text').map(c=>c.text||'').join('');
+        if(text)markdownRenderer?.appendUser(text,{echo:true});
+      }
+      if(ev.type==='message_start' && ev.message?.role==='assistant'){
+        markdownRenderer?.beginTurn(); fullResponseAccumulator='';
+      }
+      // Some providers supply only message_end, or reconnect after text deltas.
+      if(ev.type==='message_end'&&ev.message?.role==='assistant'){
+        const text=(ev.message.content||[]).filter(c=>c.type==='text').map(c=>c.text||'').join('');
+        if(text){fullResponseAccumulator=text;markdownRenderer?.render(document.getElementById('dialogueText'),text,true);}
+      }
+      if (bgStream) {
+        // The selectable DOM is the only assistant text output; canvas stays telemetry-only.
+        const backgroundType=ev.assistantMessageEvent?.type;
+        if (ev.type !== 'message_update' || !['text_delta','thinking_delta'].includes(backgroundType)) bgStream.handlePiEvent(ev);
+      }
+
+      const dialogueEl = document.getElementById('dialogueText');
+      const reasoningEl = document.getElementById('reasoningBubble');
+      const moodEl = document.getElementById('dialogueMood');
+
+      // 1. Turn Start / Agent Start
+      if (ev.type === 'turn_start' || ev.type === 'agent_start') {
+        if (voiceUI && ev.type === 'agent_start' && ev.source !== 'pet-wake') voiceUI.beginAgentSpeech();
+        if (!currentTurnStartTime) {
+          currentTurnStartTime = performance.now();
+        }
+        if (ev.type === 'agent_start') {
+          isReceivingFinalText = false;
+          fullResponseAccumulator = '';
+          clearResultPanel();
+          showResultPanel();
+          setResultStatus('running', '任务执行中...');
+          if (markdownRenderer) {
+            markdownRenderer.reset();
+          }
+          if (resultMarkdownRenderer) {
+            resultMarkdownRenderer.reset();
+          }
+        }
+        startThinkingState();
+      }
+
+      // 2. Text Delta Streaming (Final answer output)
+      if (ev.type === 'message_update' && ev.assistantMessageEvent?.type === 'text_delta') {
+        const delta = ev.assistantMessageEvent.delta;
+        fullResponseAccumulator += delta;
+        window.fullResponseAccumulator = fullResponseAccumulator;
+        if (ev.source !== 'pet-wake') voiceUI?.onAgentTextDelta(delta);
+
+        // Track code block streaming status (odd number of backtick fences means currently inside unclosed block)
+        const backtickMatches = fullResponseAccumulator.match(/```/g) || [];
+        window.__isInsideUnclosedCodeBlock = (backtickMatches.length % 2 === 1);
+
+        // Transition from thinking to speaking with insight moment!
+        if (!isReceivingFinalText) {
+          isReceivingFinalText = true;
+          stopThinkingState();
+          moodEl.innerText = '正在回复';
+          if (voiceUI) {
+            voiceUI.onAgentReplyStart();
+          }
+          if (live2d) {
+            live2d.setMood('smug');
+          }
+        }
+
+        if (markdownRenderer) {
+          markdownRenderer.render(dialogueEl, fullResponseAccumulator, false);
+        } else {
+          const previousScroll=dialogueEl.scrollTop;
+          dialogueEl.textContent = fullResponseAccumulator;
+          dialogueEl.scrollTop = dialogueEl.dataset.followOutput === 'false' ? previousScroll : dialogueEl.scrollHeight;
+        }
+
+        showResultDeliverable(fullResponseAccumulator);
+
+        // Keep mouth moving dynamically during speech delivery
+        if (live2d && !voiceUI?.isVoiceModeActive) {
+          live2d.speakDialogue(fullResponseAccumulator, 3000);
+        }
+      }
+
+      // 3. Tool Call Start (bash, read, edit, write)
+      if (ev.type === 'tool_call_start' || ev.type === 'tool_execution_start') {
+        // Tool execution: nod working, reasoning stays quiet
+        if (live2d) {
+          live2d.stopSpeaking();
+          live2d.playMotion('Nod');
+        }
+
+        const toolId = ev.toolCallId || ev.id || 'tool_' + Date.now();
+        const toolName = ev.toolName || ev.name || 'tool';
+        const rawArgs = ev.args || ev.input || {};
+        let cmd = '';
+        if (typeof rawArgs === 'string') {
+          cmd = rawArgs;
+        } else if (rawArgs && typeof rawArgs === 'object') {
+          cmd = rawArgs.command || rawArgs.path || rawArgs.query || rawArgs.message || JSON.stringify(rawArgs);
+        }
+        toolCallsMap.set(toolId, { toolName, cmd, startTime: performance.now() });
+
+        const chipsContainer = document.getElementById('toolChipsContainer');
+        const chip = document.createElement('div');
+        chip.className = 'tool-chip';
+        chip.id = `tool-${toolId}`;
+        chip.textContent = `[${toolName}] ${cmd ? cmd.slice(0, 48) : 'running...'}`;
+        chipsContainer.appendChild(chip);
+        pruneToolChips();
+      }
+
+      // 4. Tool Call End
+      if (ev.type === 'tool_call_end' || ev.type === 'tool_execution_end') {
+        const toolId = ev.toolCallId || ev.id || 'tool';
+        const chip = document.getElementById(`tool-${toolId}`);
+        const toolInfo = toolCallsMap.get(toolId) || {};
+        const toolName = ev.toolName || ev.name || toolInfo.toolName || 'tool';
+        const cmd = toolInfo.cmd || (typeof ev.args === 'string' ? ev.args : ev.args?.command || ev.args?.path || '');
+        const duration = toolInfo.startTime ? Math.round(performance.now() - toolInfo.startTime) : undefined;
+        const output = formatToolOutput(ev.result);
+        const isError = Boolean(ev.isError);
+
+        if (chip) {
+          chip.textContent = `[${toolName}] 完成`;
+          chip.dataset.done = '1';
+          chip.style.borderColor = isError ? 'rgba(244, 63, 94, 0.4)' : 'rgba(16, 185, 129, 0.4)';
+          chip.style.color = isError ? '#f43f5e' : '#34d399';
+        }
+
+        pruneToolChips();
+        addToolArtifact({ toolName, cmd, output, isError, duration });
+      }
+
+      // 5. Turn End / Agent End
+      if (ev.type === 'turn_end' || ev.type === 'agent_end' || ev.type === 'agent_settled') {
+        if (markdownRenderer && fullResponseAccumulator) {
+          markdownRenderer.render(dialogueEl, fullResponseAccumulator, true);
+        }
+        if (resultMarkdownRenderer && fullResponseAccumulator.trim()) {
+          showResultDeliverable(fullResponseAccumulator);
+          resultMarkdownRenderer.render(document.getElementById('resultMarkdownContent'), fullResponseAccumulator, true);
+        }
+
+        if (ev.type === 'agent_end' || ev.type === 'agent_settled') {
+          isReceivingFinalText = false;
+          stopThinkingState();
+          document.getElementById('sendBtn').innerText = '发送';
+
+          const totalElapsed = currentTurnStartTime ? Math.round(performance.now() - currentTurnStartTime) : null;
+          setResultStatus('completed', '执行完成', totalElapsed);
+
+          // Let Jev evaluate the emotional outcome of the final reply!
+          if (fullResponseAccumulator.trim()) {
+            try{localStorage.setItem('pichan_last_reply',fullResponseAccumulator);}catch{}
+            evaluateJevEmotion(fullResponseAccumulator, 'Pi Coding Agent Final Response');
+            // If voice mode is active, trigger TTS readback automatically
+            if (voiceUI && voiceUI.isVoiceModeActive && ev.source !== 'pet-wake') {
+              voiceUI.onAgentResponse(fullResponseAccumulator);
+            } else if (live2d) {
+              // Let character finish speaking the final sentence naturally
+              live2d.speakDialogue(fullResponseAccumulator);
+            }
+          } else {
+            if (live2d) {
+              live2d.stopSpeaking();
+              live2d.setMood('neutral');
+            }
+            moodEl.innerText = '任务已完成';
+          }
+        }
+      }
+    }
+
+    // Send Prompt
+    window.sendPrompt = async function(customText) {
+      const input = document.getElementById('promptInput');
+      const text = (typeof customText === 'string' ? customText : input.value).trim();
+      if (!text) return;
+      if (/^\/model(?:\s|$)/i.test(text)) {
+        try {
+          if (!window.piChatModels) throw new Error('模型选择器尚未加载，请稍后再试');
+          await window.piChatModels.open();
+          input.value = '';
+        } catch (error) { alert('读取当前模型失败：' + error.message); }
+        return;
+      }
+
+      input.value = '';
+      document.getElementById('sendBtn').innerText = '运行中';
+      document.getElementById('toolChipsContainer').innerHTML = '';
+
+      clearResultPanel();
+      showResultPanel();
+      setResultStatus('running', '任务执行中...');
+
+      // User line in dialogue
+      if (markdownRenderer) {
+        markdownRenderer.appendUser(text);
+      } else {
+        document.getElementById('dialogueText').textContent = `主人: 「${text}」`;
+      }
+
+      // User/assistant text is shown in the DOM conversation, not duplicated on the canvas.
+
+      // Enter Thinking State immediately
+      startThinkingState();
+
+      try {
+        const response = await fetch('/api/prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, projectId: window.piMemoryProjectId || 'default', memoryEnabled: window.piMemoryRetrievalEnabled === true })
+        });
+        if (!response.ok) throw new Error((await response.json()).error || `HTTP ${response.status}`);
+      } catch (err) {
+        stopThinkingState();
+        setResultStatus('error', '发送失败');
+        document.getElementById('sendBtn').innerText = '发送';
+        input.value = text;
+        alert('发送失败: ' + err.message);
+      }
+    };
+
+    window.quickTask = function(val) {
+      document.getElementById('promptInput').value = val;
+      window.sendPrompt();
+    };
+
+    // Jev Direct Tests with Spoken Explanations & Gestures
+    window.testJevRoute = async function(text) {
+      clearResultPanel();
+      showResultPanel();
+      setResultStatus('running', 'Jev 任务分流评估中...');
+
+      if (markdownRenderer) {
+        markdownRenderer.render(document.getElementById('dialogueText'), `*Jev 任务分流评估中...* \`${text}\``, true);
+      } else {
+        document.getElementById('dialogueText').textContent = `[Jev 任务分流评估中...] ${text}`;
+      }
+      startThinkingState();
+
+      try {
+        const res = await fetch('/api/jev/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'route', text })
+        });
+        const data = await res.json();
+        stopThinkingState();
+        
+        const answerText = `**【Jev 智能分流结果】**\n\n${data.output}`;
+        if (markdownRenderer) {
+          markdownRenderer.render(document.getElementById('dialogueText'), answerText, true);
+        } else {
+          document.getElementById('dialogueText').textContent = answerText;
+        }
+
+        setResultStatus('completed', '架构分流判定完成');
+        showResultDeliverable(answerText);
+
+        // Jev director applies proud/confident reaction and speaks the decision!
+        if (live2d) {
+          live2d.setMood('smug');
+          live2d.speakDialogue(answerText, 4500);
+        }
+        document.getElementById('jevDirectorBadge').innerText = 'Jev 情绪中枢: 架构分流判定 (100%)';
+        document.getElementById('dialogueMood').innerText = '分流判定';
+      } catch (e) {
+        stopThinkingState();
+        setResultStatus('error', '评估失败');
+        alert(e.message);
+      }
+    };
+
+    window.testJevCheck = async function(text) {
+      clearResultPanel();
+      showResultPanel();
+      setResultStatus('running', 'Jev 安全检测中...');
+
+      if (markdownRenderer) {
+        markdownRenderer.render(document.getElementById('dialogueText'), `*Jev 安全检测中...* \`${text}\``, true);
+      } else {
+        document.getElementById('dialogueText').textContent = `[Jev 安全检测中...] ${text}`;
+      }
+      startThinkingState();
+
+      try {
+        const res = await fetch('/api/jev/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'check', text })
+        });
+        const data = await res.json();
+        stopThinkingState();
+        
+        const answerText = `**【Jev 安全门禁拦截判定】**\n\n${data.output}`;
+        if (markdownRenderer) {
+          markdownRenderer.render(document.getElementById('dialogueText'), answerText, true);
+        } else {
+          document.getElementById('dialogueText').textContent = answerText;
+        }
+
+        setResultStatus(data.code === 2 ? 'error' : 'completed', data.code === 2 ? '高危拦截' : '安全放行');
+        showResultDeliverable(answerText);
+
+        if (data.code === 2 || data.output.includes('DANGEROUS')) {
+          if (live2d) {
+            live2d.setMood('alert');
+            live2d.speakDialogue('危险指令已被 Jev 安全门禁即时拦截！保护主人的工作区免受破坏是派娘的职责！', 4000);
+          }
+          document.getElementById('jevDirectorBadge').innerText = 'Jev 情绪中枢: 高危指令拦截 (100%)';
+          document.getElementById('dialogueMood').innerText = '警惕拦截';
+        } else {
+          if (live2d) {
+            live2d.setMood('happy');
+            live2d.speakDialogue('经 Jev 审查，指令完全安全，可以放心执行哦！', 3500);
+          }
+          document.getElementById('jevDirectorBadge').innerText = 'Jev 情绪中枢: 安全放行 (100%)';
+          document.getElementById('dialogueMood').innerText = '安全放行';
+        }
+      } catch (e) {
+        stopThinkingState();
+        setResultStatus('error', '检测失败');
+        alert(e.message);
+      }
+    };
+  </script>
+<script type="module" src="/conversation-history.js?v=20260923-write-1"></script>
+<script type="module" src="./mcp-panel.js?v=20260923-qq-voice"></script>
+<script type="module" src="./workbench-panel.js"></script>
+<script type="module" src="./workbench-activity.js"></script>
+<script type="module" src="./memory-panel.js?v=20260923-qq-voice"></script>
+<script type="module" src="./task-board.js"></script>
+<script type="module" src="./task-runtime.js"></script>
+<link rel="stylesheet" href="./task-handoff.css">
+<script type="module" src="./task-handoff.js?v=20260923-memory-isolation"></script>
+<link rel="stylesheet" href="./chat-model-picker.css">
+<script type="module" src="./chat-model-picker.js"></script>
+<script type="module" src="./runtime-ambient.js"></script>
+<script type="module" src="./background-markdown.js"></script>
+<script type="module" src="/runtime-details.js?v=20260923-orchestration"></script>
+<link rel="stylesheet" href="/studio-simplify.css"><script type="module" src="/studio-simplify.js?v=20260923-connect-4"></script></body>
+</html>
+
+
+

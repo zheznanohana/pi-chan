@@ -1,0 +1,263 @@
+{
+  "modelId": "model_0019b64a",
+  "displayName": "PiChan",
+  "version": "1.0.0",
+  "modelPath": "./live2d/model/model.model3.json",
+  "sourceSignature": {
+    "modelDir": "model",
+    "model3File": "model.model3.json",
+    "cdi3File": "PiChan.cdi3.json",
+    "hash": "0019b64aab93f8111c36402cfe726b3ff91a356679ca940fd8be53e7c609181d",
+    "generatedAt": "2026-09-21T03:07:06.257Z"
+  },
+  "autoProfile": {
+    "provider": "heuristic",
+    "promptVersion": "soullink-profile-autogen-v3",
+    "generatedAt": "2026-09-21T03:07:06.257Z",
+    "notes": [
+      "Generated from model3/cdi3 parameter names.",
+      "LLM may refine this profile when OpenAI-compatible settings are enabled."
+    ]
+  },
+  "schemaVersion": 2,
+  "capabilities": {
+    "headControl": true,
+    "bodyControl": true,
+    "eyeBlink": true,
+    "eyeSmile": false,
+    "gazeControl": true,
+    "mouthOpen": true,
+    "mouthSmile": true,
+    "browControl": false,
+    "blush": false,
+    "tear": false,
+    "sweat": false,
+    "breath": true
+  },
+  "parameterMap": {
+    "eyeOpen": {
+      "targets": [
+        "ParamEyeLOpen",
+        "ParamEyeROpen"
+      ],
+      "mode": "set",
+      "scale": 1,
+      "min": 0,
+      "max": 1.2
+    },
+    "eyeBlinkL": {
+      "target": "ParamEyeLOpen",
+      "mode": "subtract",
+      "scale": 1,
+      "min": 0,
+      "max": 1.2
+    },
+    "eyeBlinkR": {
+      "target": "ParamEyeROpen",
+      "mode": "subtract",
+      "scale": 1,
+      "min": 0,
+      "max": 1.2
+    },
+    "eyeSquint": {
+      "targets": [
+        "ParamEyeLOpen",
+        "ParamEyeROpen"
+      ],
+      "mode": "subtract",
+      "scale": 0.22,
+      "min": 0,
+      "max": 1.2
+    },
+    "gazeX": {
+      "target": "ParamEyeBallX",
+      "mode": "set",
+      "scale": 1,
+      "min": -1,
+      "max": 1
+    },
+    "gazeY": {
+      "target": "ParamEyeBallY",
+      "mode": "set",
+      "scale": 1,
+      "min": -1,
+      "max": 1
+    },
+    "headX": {
+      "target": "ParamAngleX",
+      "mode": "set",
+      "scale": 30,
+      "min": -30,
+      "max": 30
+    },
+    "headY": {
+      "target": "ParamAngleY",
+      "mode": "set",
+      "scale": 30,
+      "min": -30,
+      "max": 30
+    },
+    "headZ": {
+      "target": "ParamAngleZ",
+      "mode": "set",
+      "scale": 30,
+      "min": -30,
+      "max": 30
+    },
+    "bodyX": {
+      "target": "ParamBodyAngleX",
+      "mode": "set",
+      "scale": 12,
+      "min": -12,
+      "max": 12
+    },
+    "bodyY": {
+      "target": "ParamBodyAngleY",
+      "mode": "set",
+      "scale": 12,
+      "min": -12,
+      "max": 12
+    },
+    "bodyZ": {
+      "target": "ParamBodyAngleZ",
+      "mode": "set",
+      "scale": 12,
+      "min": -12,
+      "max": 12
+    },
+    "mouthSmile": {
+      "target": "ParamMouthForm",
+      "mode": "set",
+      "scale": 1,
+      "min": -1,
+      "max": 1
+    },
+    "mouthFrown": {
+      "target": "ParamMouthForm",
+      "mode": "subtract",
+      "scale": 1,
+      "min": -1,
+      "max": 1
+    },
+    "mouthOpen": {
+      "target": "ParamMouthOpenY",
+      "mode": "set",
+      "scale": 1,
+      "min": 0,
+      "max": 1
+    },
+    "breath": {
+      "target": "ParamBreath",
+      "mode": "set",
+      "scale": 1,
+      "min": 0,
+      "max": 1
+    }
+  },
+  "idleConfig": {
+    "gazeX": [
+      -0.12,
+      0.12
+    ],
+    "gazeY": [
+      -0.06,
+      0.08
+    ],
+    "headX": [
+      -0.08,
+      0.08
+    ],
+    "headY": [
+      -0.04,
+      0.04
+    ],
+    "headZ": [
+      -0.05,
+      0.05
+    ],
+    "bodyX": [
+      -0.045,
+      0.045
+    ],
+    "bodyY": [
+      -0.014,
+      0.014
+    ],
+    "bodyZ": [
+      -0.055,
+      0.055
+    ],
+    "mouthSmile": [
+      0.02,
+      0.1
+    ],
+    "eyeOpen": [
+      0.9,
+      1
+    ]
+  },
+  "reactionBias": {
+    "shy": {
+      "blushMultiplier": 1.1,
+      "gazeAwayMultiplier": 1.05
+    },
+    "happy": {
+      "mouthSmileMultiplier": 1,
+      "eyeSmileMultiplier": 1
+    }
+  },
+  "neutralParams": {
+    "ParamEyeLOpen": 1,
+    "ParamEyeROpen": 1,
+    "ParamEyeBallX": 0,
+    "ParamEyeBallY": 0,
+    "ParamAngleX": 0,
+    "ParamAngleY": 0,
+    "ParamAngleZ": 0,
+    "ParamBodyAngleX": 0,
+    "ParamBodyAngleY": 0,
+    "ParamBodyAngleZ": 0,
+    "ParamMouthForm": 0,
+    "ParamMouthOpenY": 0,
+    "ParamBreath": 0.5
+  },
+  "parameterSmoothing": {
+    "ParamEyeLOpen": 26,
+    "ParamEyeROpen": 26,
+    "ParamEyeBallX": 11,
+    "ParamEyeBallY": 11,
+    "ParamAngleX": 8,
+    "ParamAngleY": 8,
+    "ParamAngleZ": 8,
+    "ParamBodyAngleX": 6,
+    "ParamBodyAngleY": 6,
+    "ParamBodyAngleZ": 6,
+    "ParamMouthForm": 12,
+    "ParamMouthOpenY": 24,
+    "ParamBreath": 5
+  },
+  "nativeAnimations": {
+    "motions": [
+      {
+        "group": "Idle",
+        "index": 0,
+        "file": "PiChan.idle.motion3.json"
+      },
+      {
+        "group": "Blink",
+        "index": 0,
+        "file": "PiChan.blink.motion3.json"
+      },
+      {
+        "group": "Nod",
+        "index": 0,
+        "file": "PiChan.nod.motion3.json"
+      },
+      {
+        "group": "Shake",
+        "index": 0,
+        "file": "PiChan.shake.motion3.json"
+      }
+    ]
+  }
+}

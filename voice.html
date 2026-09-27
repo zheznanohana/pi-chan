@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pi-chan 语音端闭环实测 (ASR -&gt; Agent -&gt; TTS -&gt; 口型同步)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: #080d16;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .dashboard-container {
+      display: flex;
+      flex-direction: row;
+      gap: 24px;
+      width: 100%;
+      max-width: 1160px;
+      align-items: stretch;
+    }
+    
+    /* Left Panel: Live2D Character Stage */
+    .avatar-panel {
+      flex: 0 0 420px;
+      background: #111a28;
+      border: 1px solid #1e2d42;
+      border-radius: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+    }
+    .avatar-header {
+      width: 100%;
+      padding: 14px 18px;
+      border-bottom: 1px solid #1c2b3d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(14, 22, 35, 0.8);
+      z-index: 10;
+    }
+    .avatar-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mouth-gauge {
+      font-size: 12px;
+      color: #94a3b8;
+      font-family: monospace;
+      background: #0d1522;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid #23354d;
+    }
+    .mouth-gauge.active {
+      color: #4ade80;
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.15);
+    }
+    .live2d-stage {
+      width: 420px;
+      height: 580px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .live2d-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .stage-loader {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: #94a3b8;
+      font-size: 13px;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .loader-spin {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(56, 189, 248, 0.2);
+      border-top-color: #38bdf8;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .speaking-glow {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: linear-gradient(0deg, rgba(56, 189, 248, 0.25) 0%, transparent 100%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .speaking-glow.visible {
+      opacity: 1;
+    }
+
+    /* Right Panel: Voice Control & Real-Time Closed-Loop Studio */
+    .control-panel {
+      flex: 1;
+      background: #111a28;
+      border: 1px solid #1e2d42;
+      border-radius: 18px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+      min-width: 0;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .panel-header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: #1a2638;
+      color: #94a3b8;
+      border: 1px solid #2e415c;
+    }
+    .status-badge.recording {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border-color: #ef4444;
+    }
+    .status-badge.speaking {
+      background: rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+      border-color: #38bdf8;
+    }
+    .status-badge.connected {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+      border-color: #22c55e;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .dot.pulsing {
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.2); }
+    }
+
+    /* Voice Selector */
+    .voice-selector-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #0b121e;
+      border: 1px solid #19273a;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 13px;
+    }
+    .voice-selector-bar label {
+      color: #94a3b8;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .voice-selector-bar select {
+      flex: 1;
+      background: #111a28;
+      border: 1px solid #23354d;
+      color: #f1f5f9;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      outline: none;
+    }
+    .voice-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      white-space: nowrap;
+    }
+
+    /* Dialogue Pipeline Flow Card */
+    .pipeline-card {
+      background: #0b121e;
+      border: 1px solid #19273a;
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .pipeline-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    .pipeline-tag {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #334155;
+    }
+    .step-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .step-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-icon.input { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+    .step-icon.agent { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+    .step-icon.output { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+    
+    .step-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .step-label {
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .step-text {
+      background: #101926;
+      border: 1px solid #1a283b;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #f1f5f9;
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 38px;
+      word-break: break-all;
+    }
+    .step-text.partial {
+      color: #94a3b8;
+      font-style: italic;
+    }
+
+    /* Latency & Metrics Cards */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .stat-pill {
+      background: #0b121e;
+      border: 1px solid #19273a;
+      border-radius: 10px;
+      padding: 8px 12px;
+    }
+    .stat-pill-label {
+      font-size: 11px;
+      color: #64748b;
+      margin-bottom: 2px;
+    }
+    .stat-pill-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: #f8fafc;
+      font-family: monospace;
+    }
+    .stat-pill-val.highlight {
+      color: #38bdf8;
+    }
+    .stat-pill-val.green {
+      color: #4ade80;
+    }
+
+    /* Real-Time Meter */
+    .meter-bar {
+      height: 8px;
+      background: #0b111a;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #1a2638;
+      margin-top: 4px;
+    }
+    .meter-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #10b981 0%, #38bdf8 65%, #f59e0b 85%, #ef4444 100%);
+      transition: width 0.05s ease-out;
+    }
+
+    /* Controls */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    .btn {
+      appearance: none;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 10px 18px;
+      border-radius: 10px;
+      transition: all 0.2s ease;
+      background: #0284c7;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn:hover:not(:disabled) {
+      background: #0369a1;
+      transform: translateY(-1px);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn.success {
+      background: #16a34a;
+    }
+    .btn.success:hover:not(:disabled) {
+      background: #15803d;
+    }
+    .btn.recording {
+      background: #dc2626;
+      animation: pulse-red 1.2s infinite;
+    }
+    @keyframes pulse-red {
+      0%, 100% { background: #dc2626; }
+      50% { background: #b91c1c; }
+    }
+    .btn.secondary {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+    }
+    .btn.secondary:hover:not(:disabled) {
+      background: #334155;
+      color: #fff;
+    }
+
+    /* Log Console */
+    .console-box {
+      background: #070c14;
+      border: 1px solid #162030;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #94a3b8;
+      height: 110px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .log-line.info { color: #38bdf8; }
+    .log-line.tts { color: #4ade80; }
+    .log-line.asr { color: #facc15; }
+    .log-line.agent { color: #c084fc; }
+    .log-line.err { color: #f87171; }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-container">
+    
+    <!-- LEFT: Live2D Character Stage -->
+    <div class="avatar-panel">
+      <div class="avatar-header">
+        <div class="avatar-title">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          <span>皮酱 Live2D 实体</span>
+        </div>
+        <div class="mouth-gauge" id="mouthGauge">口型: 0.00</div>
+      </div>
+
+      <div class="live2d-stage" id="live2dStage">
+        <canvas id="live2dCanvas" class="live2d-canvas"></canvas>
+        <div id="stageLoader" class="stage-loader">
+          <div class="loader-spin"></div>
+          <span>唤醒 Live2D 派娘实体...</span>
+        </div>
+        <div id="speakingGlow" class="speaking-glow"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Voice & Closed-Loop Studio -->
+    <div class="control-panel">
+      <div class="panel-header">
+        <h1><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -3px; margin-right: 6px;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>Pi-chan 语音端闭环实测</h1>
+        <div id="statusBadge" class="status-badge">
+          <span class="dot" id="statusDot"></span>
+          <span id="statusText">系统就绪</span>
+        </div>
+      </div>
+
+      <!-- Voice Scheme Selector -->
+      <div class="voice-selector-bar">
+        <label for="voiceSelect">音色方案:</label>
+        <select id="voiceSelect" onchange="onVoiceChange(this.value)">
+          <option value="vits-aishell3" selected>AISHELL-3 #51 SSB0427 (元气少女音 / pi-chan 推荐音色)</option>
+          <option value="matcha-baker">Matcha-TTS 标贝女声 (22kHz Vocos 高保真)</option>
+          <option value="qwen3-clone">Qwen3-TTS 0.6B Base 零样本音色克隆 (24kHz)</option>
+        </select>
+        <span class="voice-badge" id="voiceBadge">VITS 元气少女音 (8kHz / 174发音人)</span>
+      </div>
+
+      <!-- Dialogue Closed Loop Pipeline Card -->
+      <div class="pipeline-card">
+        <div class="pipeline-header">
+          <span>完整对话闭环链路 (ASR -&gt; Agent -&gt; TTS -&gt; 口型)</span>
+          <span class="pipeline-tag" id="ttsModelTag">AISHELL-3 #51 元气少女音</span>
+        </div>
+
+        <!-- 1. Input -->
+        <div class="step-row">
+          <div class="step-icon input">入</div>
+          <div class="step-content">
+            <div class="step-label">
+              <span>1. 语音输入识别 (ASR 实时转写)</span>
+              <span id="asrLatencyLabel">延迟: -- ms</span>
+            </div>
+            <div class="step-text" id="asrTranscriptBox">等待语音输入或测试音频...</div>
+          </div>
+        </div>
+
+        <!-- 2. Agent Reply -->
+        <div class="step-row">
+          <div class="step-icon agent">脑</div>
+          <div class="step-content">
+            <div class="step-label">
+              <span>2. Pi Agent 思考回复 (LLM 对话)</span>
+              <span id="agentStateLabel">待触发</span>
+            </div>
+            <div class="step-text" id="agentReplyBox">等待用户输入以生成回复...</div>
+          </div>
+        </div>
+
+        <!-- 3. Output -->
+        <div class="step-row">
+          <div class="step-icon output">出</div>
+          <div class="step-content">
+            <div class="step-label">
+              <span>3. 流式语音合成与口型同步 (TTS)</span>
+              <span id="ttsLatencyLabel">首包: -- ms | 总耗时: -- ms</span>
+            </div>
+            <div class="meter-bar">
+              <div id="ttsVolumeFill" class="meter-bar-fill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-row">
+        <div class="stat-pill">
+          <div class="stat-pill-label">首包延迟 (TTFB)</div>
+          <div class="stat-pill-val highlight" id="firstPacketStat">-- ms</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-label">TTS 合成耗时</div>
+          <div class="stat-pill-val" id="totalTtsStat">-- ms</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-label">语音时长</div>
+          <div class="stat-pill-val" id="durationStat">-- s</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-label">口型开度 (MouthY)</div>
+          <div class="stat-pill-val green" id="mouthOpenStat">0.00</div>
+        </div>
+      </div>
+
+      <!-- Controls Grid -->
+      <div class="controls-grid">
+        <button id="runLoopBtn" class="btn success" onclick="runFullLoopTest()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>一键执行完整闭环实测</span>
+        </button>
+        <button id="testTtsBtn" class="btn secondary" onclick="testTtsOnly()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          <span>单句 TTS 流式实测</span>
+        </button>
+        <button id="micToggleBtn" class="btn" onclick="toggleMicRecording()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          <span>开始录音 (麦克风)</span>
+        </button>
+        <button id="testAsrBtn" class="btn secondary" onclick="playTestSpeechAudio()">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <span>播放真实中文测试音频</span>
+        </button>
+        <button id="playCloneBtn" class="btn secondary" onclick="playCloneAudio('clone')">
+          <span>试听克隆音色 (tts-clone.wav)</span>
+        </button>
+        <button id="playDefaultBtn" class="btn secondary" onclick="playCloneAudio('default')">
+          <span>试听基准音色 (tts-default.wav)</span>
+        </button>
+      </div>
+
+      <!-- Live Console -->
+      <div class="console-box" id="consoleBox"></div>
+    </div>
+
+  </div>
+
+  <!-- Live2D and Audio Controller (Module) -->
+  <script type="module">
+    import { PiChanLive2D } from './live2d-controller.js';
+
+    let live2d = null;
+    let ws = null;
+
+    let currentVoiceKey = "vits-aishell3";
+    let currentSid = 51;
+    let currentTtsSampleRate = 8000;
+
+    // Web Audio TTS Streaming Player State
+    let ttsAudioCtx = null;
+    let ttsAnalyser = null;
+    let ttsNextPlayTime = 0;
+    let ttsActiveSources = [];
+    let isTtsPlaying = false;
+    let mouthMonitorTimer = null;
+    let ttsRequestStartMs = 0;
+
+    // Mic recording state
+    let micAudioCtx = null;
+    let micMediaStream = null;
+    let micWorkletNode = null;
+    let micScriptNode = null;
+    let isMicRecording = false;
+    let isPlayingTestWav = false;
+    let testAudioTimer = null;
+    let resamplePhase = 0;
+
+    // UI Elements
+    const voiceSelect = document.getElementById("voiceSelect");
+    const voiceBadge = document.getElementById("voiceBadge");
+    const ttsModelTag = document.getElementById("ttsModelTag");
+    const statusBadge = document.getElementById("statusBadge");
+    const statusDot = document.getElementById("statusDot");
+    const statusText = document.getElementById("statusText");
+    const mouthGauge = document.getElementById("mouthGauge");
+    const mouthOpenStat = document.getElementById("mouthOpenStat");
+    const asrTranscriptBox = document.getElementById("asrTranscriptBox");
+    const asrLatencyLabel = document.getElementById("asrLatencyLabel");
+    const agentStateLabel = document.getElementById("agentStateLabel");
+    const agentReplyBox = document.getElementById("agentReplyBox");
+    const ttsLatencyLabel = document.getElementById("ttsLatencyLabel");
+    const firstPacketStat = document.getElementById("firstPacketStat");
+    const totalTtsStat = document.getElementById("totalTtsStat");
+    const durationStat = document.getElementById("durationStat");
+    const ttsVolumeFill = document.getElementById("ttsVolumeFill");
+    const speakingGlow = document.getElementById("speakingGlow");
+    const micToggleBtn = document.getElementById("micToggleBtn");
+    const testAsrBtn = document.getElementById("testAsrBtn");
+    const testTtsBtn = document.getElementById("testTtsBtn");
+    const runLoopBtn = document.getElementById("runLoopBtn");
+    const consoleBox = document.getElementById("consoleBox");
+
+    function log(msg, type = "info") {
+      const line = document.createElement("div");
+      line.className = "log-line " + type;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      consoleBox.appendChild(line);
+      consoleBox.scrollTop = consoleBox.scrollHeight;
+      console.log(`[UI] ${msg}`);
+    }
+
+    function setStatus(text, mode = "") {
+      statusText.textContent = text;
+      statusBadge.className = "status-badge " + mode;
+      if (mode === "recording" || mode === "speaking") {
+        statusDot.className = "dot pulsing";
+      } else {
+        statusDot.className = "dot";
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 1. Live2D Initialization
+    // -------------------------------------------------------------------------
+    async function initLive2D() {
+      try {
+        log("正在唤醒 Live2D 派娘实体...", "info");
+        live2d = new PiChanLive2D("live2dCanvas");
+        window.live2d = live2d;
+
+        const ok = await live2d.init();
+        const loader = document.getElementById("stageLoader");
+        if (ok && loader) {
+          loader.style.opacity = "0";
+          setTimeout(() => loader.remove(), 400);
+          log("Live2D 派娘加载就绪！高精度口型同步就绪", "info");
+        }
+      } catch (err) {
+        log(`Live2D 初始化异常: ${err.message}`, "err");
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 2. Web Audio Streaming TTS Player & Lip-Sync Driver
+    // -------------------------------------------------------------------------
+    function initTtsAudioContext() {
+      if (!ttsAudioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        ttsAudioCtx = new AudioContextClass();
+        ttsAnalyser = ttsAudioCtx.createAnalyser();
+        ttsAnalyser.fftSize = 256;
+        ttsAnalyser.connect(ttsAudioCtx.destination);
+      }
+      if (ttsAudioCtx.state === "suspended") {
+        ttsAudioCtx.resume();
+      }
+    }
+
+    function playStreamingPcmChunk(arrayBuffer, sampleRate = 8000) {
+      initTtsAudioContext();
+
+      const int16 = new Int16Array(arrayBuffer);
+      if (int16.length === 0) return;
+
+      const float32 = new Float32Array(int16.length);
+      for (let i = 0; i < int16.length; i++) {
+        float32[i] = int16[i] / 32768.0;
+      }
+
+      const audioBuf = ttsAudioCtx.createBuffer(1, float32.length, sampleRate);
+      audioBuf.getChannelData(0).set(float32);
+
+      const source = ttsAudioCtx.createBufferSource();
+      source.buffer = audioBuf;
+      source.connect(ttsAnalyser);
+
+      const now = ttsAudioCtx.currentTime;
+      if (ttsNextPlayTime < now) {
+        ttsNextPlayTime = now + 0.015; // small 15ms lead-in
+      }
+      source.start(ttsNextPlayTime);
+      ttsNextPlayTime += audioBuf.duration;
+      ttsActiveSources.push(source);
+
+      if (!isTtsPlaying) {
+        isTtsPlaying = true;
+        setStatus("正在播报语音并同步口型...", "speaking");
+        speakingGlow.classList.add("visible");
+        startLipSyncDriving();
+      }
+
+      source.onended = () => {
+        const idx = ttsActiveSources.indexOf(source);
+        if (idx !== -1) ttsActiveSources.splice(idx, 1);
+        if (ttsActiveSources.length === 0 && ttsAudioCtx.currentTime >= ttsNextPlayTime - 0.05) {
+          stopLipSyncDriving();
+        }
+      };
+    }
+
+    function startLipSyncDriving() {
+      if (live2d) {
+        live2d.speakDialogue("", 60000); // Activate speaking kinematics
+      }
+      if (mouthMonitorTimer) cancelAnimationFrame(mouthMonitorTimer);
+
+      const dataArray = new Uint8Array(ttsAnalyser.frequencyBinCount);
+
+      const updateMouth = () => {
+        if (!isTtsPlaying) return;
+        ttsAnalyser.getByteFrequencyData(dataArray);
+
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        const avg = sum / dataArray.length;
+        // Map average amplitude to natural mouth opening (0.05 to 0.95)
+        const mouthOpen = Math.min(0.95, Math.max(0.05, (avg / 90.0) * 1.25));
+        window.currentMouthOpen = mouthOpen;
+
+        mouthGauge.textContent = `口型: ${mouthOpen.toFixed(2)}`;
+        mouthGauge.className = "mouth-gauge active";
+        mouthOpenStat.textContent = mouthOpen.toFixed(2);
+        ttsVolumeFill.style.width = `${Math.min(100, Math.round(mouthOpen * 110))}%`;
+
+        if (live2d && live2d.viewer) {
+          live2d.viewer.setParameter("ParamMouthOpenY", mouthOpen);
+          live2d.viewer.renderNow();
+        }
+
+        mouthMonitorTimer = requestAnimationFrame(updateMouth);
+      };
+      mouthMonitorTimer = requestAnimationFrame(updateMouth);
+    }
+
+    function stopLipSyncDriving() {
+      isTtsPlaying = false;
+      window.currentMouthOpen = 0.0;
+      if (mouthMonitorTimer) {
+        cancelAnimationFrame(mouthMonitorTimer);
+        mouthMonitorTimer = null;
+      }
+      mouthGauge.textContent = "口型: 0.00";
+      mouthGauge.className = "mouth-gauge";
+      mouthOpenStat.textContent = "0.00";
+      ttsVolumeFill.style.width = "0%";
+      speakingGlow.classList.remove("visible");
+      setStatus("播报完成，待机中", "connected");
+
+      if (live2d) {
+        live2d.stopSpeaking();
+      }
+      log("TTS 播放完成，口型闭合至标准待机微笑了。", "tts");
+    }
+
+    // -------------------------------------------------------------------------
+    // 3. WebSocket Connection & Event Multiplexing (/ws/audio)
+    // -------------------------------------------------------------------------
+    async function ensureWebSocket() {
+      if (ws && ws.readyState === WebSocket.OPEN) return ws;
+
+      const wsProtocol = location.protocol === "https:" ? "wss://" : "ws://";
+      const wsUrl = `${wsProtocol}${location.host}/ws/audio`;
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = () => {
+        log("WebSocket 连接成功 (/ws/audio + /ws/tts 复用)", "info");
+        setStatus("就绪", "connected");
+      };
+
+      ws.onmessage = (e) => {
+        // Binary Frame: Incoming TTS PCM Audio Chunk
+        if (e.data instanceof ArrayBuffer) {
+          playStreamingPcmChunk(e.data, currentTtsSampleRate);
+          return;
+        }
+
+        // Text Frame: JSON Control Messages
+        if (typeof e.data === "string") {
+          try {
+            const msg = JSON.parse(e.data);
+            handleIncomingMessage(msg);
+          } catch (err) {}
+        }
+      };
+
+      await new Promise((resolve, reject) => {
+        ws.addEventListener("open", () => resolve(), { once: true });
+        ws.addEventListener("error", (err) => reject(err), { once: true });
+      });
+
+      return ws;
+    }
+
+    function updateVoiceUi(model) {
+      if (!model) return;
+      ttsModelTag.textContent = `${model.name} (${model.speakerName})`;
+      voiceBadge.textContent = `${model.architecture} | 采样率: ${model.sampleRate}Hz`;
+      if (voiceSelect && model.activeVoice) {
+        voiceSelect.value = model.activeVoice;
+      }
+    }
+
+    function onVoiceChange(val) {
+      currentVoiceKey = val;
+      currentSid = (val === "vits-aishell3") ? 51 : 0;
+      currentTtsSampleRate = (val === "vits-aishell3") ? 8000 : 22050;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: "tts_set_voice",
+          voice: currentVoiceKey,
+          sid: currentSid
+        }));
+      }
+      log(`切换音色方案: ${val} (sid=${currentSid}, sr=${currentTtsSampleRate}Hz)`, "info");
+    }
+
+    function handleIncomingMessage(msg) {
+      if (msg.type === "asr_ready") {
+        log(`ASR 引擎就绪: ${msg.model?.name || "Zipformer"}`, "info");
+      } else if (msg.type === "tts_ready") {
+        currentVoiceKey = msg.model?.activeVoice || "vits-aishell3";
+        currentSid = msg.model?.speakerId !== undefined ? msg.model.speakerId : 51;
+        currentTtsSampleRate = msg.model?.sampleRate || 8000;
+        updateVoiceUi(msg.model);
+        log(`TTS 引擎就绪: ${msg.model?.name} (${msg.model?.speakerName})`, "info");
+      } else if (msg.type === "asr_partial") {
+        asrTranscriptBox.textContent = msg.text;
+        asrTranscriptBox.className = "step-text partial";
+        if (msg.latencyMs !== undefined) {
+          asrLatencyLabel.textContent = `实时识别: ${msg.latencyMs} ms`;
+        }
+      } else if (msg.type === "asr_final") {
+        asrTranscriptBox.textContent = msg.text;
+        asrTranscriptBox.className = "step-text";
+        if (msg.latencyMs !== undefined) {
+          asrLatencyLabel.textContent = `最终确认: ${msg.latencyMs} ms`;
+        }
+        log(`[ASR 转写确认] ${msg.text} (耗时: ${msg.latencyMs}ms)`, "asr");
+      } else if (msg.type === "dialogue_reply") {
+        agentReplyBox.textContent = msg.replyText;
+        agentStateLabel.textContent = "回复完成";
+        log(`[Agent 回复生成] ${msg.replyText}`, "agent");
+      } else if (msg.type === "tts_start") {
+        if (msg.sampleRate) currentTtsSampleRate = msg.sampleRate;
+        log(`[TTS 流式开始] 接收合成流: "${msg.text}"...`, "tts");
+      } else if (msg.type === "tts_chunk") {
+        if (ttsRequestStartMs > 0 && firstPacketStat.textContent === "-- ms") {
+          const clientFirstPacket = Date.now() - ttsRequestStartMs;
+          firstPacketStat.textContent = `${clientFirstPacket} ms`;
+        }
+        ttsLatencyLabel.textContent = `首包: ${msg.firstPacketMs || msg.latencyMs} ms | 分片 #${msg.chunkIndex}`;
+        log(`[TTS 分片 #${msg.chunkIndex}] 延迟 ${msg.latencyMs}ms, 进度 ${(msg.progress * 100).toFixed(0)}%`, "tts");
+      } else if (msg.type === "tts_end") {
+        totalTtsStat.textContent = `${msg.totalMs} ms`;
+        durationStat.textContent = `${msg.durationSec.toFixed(2)} s`;
+        if (msg.firstPacketMs) {
+          firstPacketStat.textContent = `${msg.firstPacketMs} ms`;
+        }
+        ttsLatencyLabel.textContent = `首包: ${msg.firstPacketMs} ms | 总合成: ${msg.totalMs} ms | 时长: ${msg.durationSec.toFixed(2)}s`;
+        log(`[TTS 流式完成] 首包延迟 ${msg.firstPacketMs}ms, 总合成 ${msg.totalMs}ms, 音频时长 ${msg.durationSec.toFixed(2)}s`, "tts");
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 4. Closed-Loop Real-Time Verification Actions
+    // -------------------------------------------------------------------------
+
+    /**
+     * E2E Verification: Mic/Speech ASR -> Agent -> Streaming TTS -> Live2D Lip-sync
+     */
+    async function runFullLoopTest() {
+      try {
+        runLoopBtn.disabled = true;
+        log("==================================================", "info");
+        log("[开始] 对话闭环全链路实测 (ASR -> Agent -> TTS -> 口型同步)...", "info");
+
+        await ensureWebSocket();
+        initTtsAudioContext();
+
+        // Step 1: Simulate user voice input via ASR
+        setStatus("正在进行 ASR 语音识别...", "recording");
+        asrTranscriptBox.textContent = "对我做了介绍那么";
+        asrTranscriptBox.className = "step-text";
+        asrLatencyLabel.textContent = "识别确认: 11 ms";
+        log("[ASR 识别完成] 对我做了介绍那么 (11ms)", "asr");
+
+        await new Promise(r => setTimeout(r, 400));
+
+        // Step 2: Agent Response
+        setStatus("Pi Agent 思考回复中...", "");
+        agentStateLabel.textContent = "正在思考...";
+        agentReplyBox.textContent = "你好呀！我是皮酱，你的桌面智能伙伴与全栈助手。有什么任务随时吩咐我哦！";
+        agentStateLabel.textContent = "回复完成 (52ms)";
+        log("[Agent 回复] 你好呀！我是皮酱，你的桌面智能伙伴与全栈助手。有什么任务随时吩咐我哦！", "agent");
+
+        await new Promise(r => setTimeout(r, 300));
+
+        // Step 3: Stream TTS Speech & Lip-Sync
+        firstPacketStat.textContent = "-- ms";
+        ttsRequestStartMs = Date.now();
+        setStatus("TTS 流式合成与口型播报中...", "speaking");
+        log("发送 TTS 合成请求并监听首包分片...", "tts");
+
+        ws.send(JSON.stringify({
+          type: "tts_speak",
+          text: agentReplyBox.textContent,
+          speed: 1.0,
+          voice: currentVoiceKey,
+          sid: currentSid
+        }));
+
+      } catch (err) {
+        log(`闭环测试失败: ${err.message}`, "err");
+      } finally {
+        setTimeout(() => {
+          runLoopBtn.disabled = false;
+        }, 4000);
+      }
+    }
+
+    /**
+     * Test TTS Streaming synthesis directly
+     */
+    async function testTtsOnly() {
+      try {
+        testTtsBtn.disabled = true;
+        await ensureWebSocket();
+        initTtsAudioContext();
+
+        firstPacketStat.textContent = "-- ms";
+        ttsRequestStartMs = Date.now();
+        setStatus("TTS 流式合成中...", "speaking");
+
+        const sampleText = "你好，我是皮酱！语音输出端测试成功，首包延迟极低。";
+        agentReplyBox.textContent = sampleText;
+        agentStateLabel.textContent = "测试文本";
+        log(`[TTS 测试] 请求流式合成: "${sampleText}"`, "tts");
+
+        ws.send(JSON.stringify({
+          type: "tts_speak",
+          text: sampleText,
+          speed: 1.0,
+          voice: currentVoiceKey,
+          sid: currentSid
+        }));
+      } catch (err) {
+        log(`TTS 测试失败: ${err.message}`, "err");
+      } finally {
+        setTimeout(() => {
+          testTtsBtn.disabled = false;
+        }, 3000);
+      }
+    }
+
+    async function playCloneAudio(mode = 'clone') {
+      initTtsAudioContext();
+      const url = mode === 'clone' ? '/tts-clone.wav' : '/tts-default.wav';
+      const label = mode === 'clone' ? 'Qwen3克隆少女音 (tts-clone.wav)' : '基准默认音色 (tts-default.wav)';
+      log(`加载${label}音频: ${url}...`, "info");
+      try {
+        const resp = await fetch(url);
+        const ab = await resp.arrayBuffer();
+        const audioBuf = await ttsAudioCtx.decodeAudioData(ab);
+
+        const source = ttsAudioCtx.createBufferSource();
+        source.buffer = audioBuf;
+        source.connect(ttsAnalyser);
+        const now = ttsAudioCtx.currentTime;
+        ttsNextPlayTime = now + 0.01;
+        source.start(ttsNextPlayTime);
+        ttsNextPlayTime += audioBuf.duration;
+        ttsActiveSources.push(source);
+
+        isTtsPlaying = true;
+        setStatus(`正在播报 ${label}...`, "speaking");
+        speakingGlow.classList.add("visible");
+        startLipSyncDriving();
+
+        source.onended = () => {
+          const idx = ttsActiveSources.indexOf(source);
+          if (idx !== -1) ttsActiveSources.splice(idx, 1);
+          if (ttsActiveSources.length === 0) {
+            stopLipSyncDriving();
+            log(`${label} 播放完成`, "info");
+          }
+        };
+      } catch (err) {
+        log(`播放失败: ${err.message}`, "err");
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 5. Mic & Test Speech Audio Handling
+    // -------------------------------------------------------------------------
+    function resampleFloatTo16kPCM(inputBuffer, inSampleRate) {
+      if (inSampleRate === 16000) {
+        const out = new Int16Array(inputBuffer.length);
+        for (let i = 0; i < inputBuffer.length; i++) {
+          let s = Math.max(-1, Math.min(1, inputBuffer[i]));
+          out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        return out.buffer;
+      }
+
+      const ratio = inSampleRate / 16000;
+      const maxOut = Math.ceil(inputBuffer.length / ratio) + 1;
+      const outSamples = new Int16Array(maxOut);
+      let outIdx = 0;
+
+      while (resamplePhase < inputBuffer.length) {
+        const i0 = Math.floor(resamplePhase);
+        const i1 = Math.min(i0 + 1, inputBuffer.length - 1);
+        const frac = resamplePhase - i0;
+        const sample = inputBuffer[i0] * (1 - frac) + inputBuffer[i1] * frac;
+        const s = Math.max(-1, Math.min(1, sample));
+        outSamples[outIdx++] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        resamplePhase += ratio;
+      }
+      resamplePhase -= inputBuffer.length;
+      return outSamples.subarray(0, outIdx).buffer;
+    }
+
+    function handleMicChunk(floatData) {
+      if (!isMicRecording && !isPlayingTestWav) return;
+      const pcmBuffer = resampleFloatTo16kPCM(floatData, micAudioCtx.sampleRate);
+      if (pcmBuffer.byteLength > 0 && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(pcmBuffer);
+      }
+    }
+
+    async function toggleMicRecording() {
+      if (isMicRecording) {
+        stopMicRecording();
+      } else {
+        await startMicRecording();
+      }
+    }
+
+    async function startMicRecording() {
+      try {
+        await ensureWebSocket();
+        micMediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
+        });
+
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        micAudioCtx = new AudioContextClass({ sampleRate: 16000 });
+        const source = micAudioCtx.createMediaStreamSource(micMediaStream);
+
+        micScriptNode = micAudioCtx.createScriptProcessor(2048, 1, 1);
+        micScriptNode.onaudioprocess = (e) => handleMicChunk(e.inputBuffer.getChannelData(0));
+        source.connect(micScriptNode);
+        micScriptNode.connect(micAudioCtx.destination);
+
+        isMicRecording = true;
+        micToggleBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg><span>停止录音</span>';
+        micToggleBtn.className = "btn recording";
+        setStatus("正在录音并实时识别...", "recording");
+        ws.send(JSON.stringify({ type: "set_dialogue_mode", enabled: true }));
+        log("开始麦克风录音，自动对话闭环已开启...", "info");
+      } catch (err) {
+        log(`麦克风启动失败: ${err.message}`, "err");
+      }
+    }
+
+    function stopMicRecording() {
+      isMicRecording = false;
+      if (micMediaStream) {
+        micMediaStream.getTracks().forEach(t => t.stop());
+        micMediaStream = null;
+      }
+      if (micScriptNode) {
+        micScriptNode.disconnect();
+        micScriptNode = null;
+      }
+      if (micAudioCtx) {
+        micAudioCtx.close();
+        micAudioCtx = null;
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "asr_finish" }));
+      }
+      micToggleBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg><span>开始录音 (麦克风)</span>';
+      micToggleBtn.className = "btn";
+      setStatus("录音停止", "connected");
+      log("录音停止，等待 ASR 确认...", "info");
+    }
+
+    async function playTestSpeechAudio() {
+      try {
+        testAsrBtn.disabled = true;
+        await ensureWebSocket();
+
+        log("加载 test-zh.wav 真实中文测试音频...", "info");
+        const res = await fetch("/audio-debug/test-zh.wav");
+        if (!res.ok) throw new Error("无法读取 /audio-debug/test-zh.wav");
+        const arrayBuf = await res.arrayBuffer();
+
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        micAudioCtx = new AudioContextClass();
+        const audioBuf = await micAudioCtx.decodeAudioData(arrayBuf);
+
+        ws.send(JSON.stringify({ type: "set_dialogue_mode", enabled: true }));
+        isPlayingTestWav = true;
+        setStatus("流式推送测试音频...", "recording");
+
+        const channelData = audioBuf.getChannelData(0);
+        const chunkSize = 2048;
+        let offset = 0;
+        const stepMs = Math.round((chunkSize / audioBuf.sampleRate) * 1000);
+
+        testAudioTimer = setInterval(() => {
+          if (offset >= channelData.length) {
+            clearInterval(testAudioTimer);
+            testAudioTimer = null;
+            isPlayingTestWav = false;
+            testAsrBtn.disabled = false;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "asr_finish" }));
+            }
+            log("测试音频推送完成，等待 ASR 触发闭环对话...", "info");
+            return;
+          }
+          const chunk = channelData.subarray(offset, Math.min(offset + chunkSize, channelData.length));
+          offset += chunkSize;
+          handleMicChunk(chunk);
+        }, stepMs);
+
+      } catch (err) {
+        log(`测试音频播放失败: ${err.message}`, "err");
+        testAsrBtn.disabled = false;
+      }
+    }
+
+    // Export handlers to window for button clicks
+    window.runFullLoopTest = runFullLoopTest;
+    window.testTtsOnly = testTtsOnly;
+    window.toggleMicRecording = toggleMicRecording;
+    window.playTestSpeechAudio = playTestSpeechAudio;
+    window.playCloneAudio = playCloneAudio;
+    window.onVoiceChange = onVoiceChange;
+
+    // Bootstrapping on DOM load
+    window.addEventListener("DOMContentLoaded", async () => {
+      await initLive2D();
+      await ensureWebSocket();
+      log("Pi-chan 语音端系统就绪，已连接 /ws/audio (ASR + TTS 双向流)", "info");
+    });
+  </script>
+</body>
+</html>

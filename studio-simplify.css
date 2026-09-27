@@ -1,0 +1,23 @@
+/* Quiet navigation, existing companion and development canvases stay intact. */
+.simplified-studio .top-actions{gap:8px;flex-wrap:wrap}
+.simplified-studio .brand-desc,.simplified-studio .version-badge{display:none}
+.studio-action-group{position:relative;font-size:13px}
+.studio-action-group>summary{list-style:none;cursor:pointer;padding:8px 13px;border:1px solid var(--studio-line,#deddd7);border-radius:9px;background:transparent;min-height:36px;box-sizing:border-box;color:var(--studio-ink,#252722)}
+.studio-action-group>summary::-webkit-details-marker{display:none}
+.studio-action-group[open]>summary{background:var(--studio-wash,#eee)}
+.studio-action-popover{position:absolute;right:0;top:calc(100% + 8px);z-index:1001;width:230px;padding:8px;border:1px solid var(--studio-line,#deddd7);border-radius:12px;background:var(--studio-paper,#faf9f5);box-shadow:0 6px 20px #0000000d;display:flex;flex-direction:column;gap:3px}
+.studio-action-popover>button{width:100%;text-align:left;min-height:38px;padding:8px 12px;border:0!important;border-radius:7px;background:transparent!important;color:inherit;font:inherit;cursor:pointer}
+.studio-action-popover>button:hover{background:var(--studio-wash,#efeee8)!important}
+.studio-system-details{padding:9px 12px;border-top:1px solid var(--studio-line,#deddd7);font-size:12px}
+.studio-system-details summary{cursor:pointer;color:var(--studio-muted,#686963)}
+.studio-system-details .nav-pill{white-space:normal;margin-top:8px;border:0;padding:0;font-size:11px}
+.studio-model-options{margin:0 0 12px;border-bottom:1px solid var(--studio-line,#deddd7);padding-bottom:10px}
+.studio-model-options>summary{cursor:pointer;font-size:12px;color:var(--studio-muted,#686963);padding:6px 0}
+.studio-model-options .chat-model-picker{margin-top:10px}
+.simplified-studio .runtime-panel:not(.show-all-status)>.runtime-disclosure[data-active="false"]{display:none}
+.studio-detail-toggle{margin-left:auto;border:0;background:transparent;color:var(--studio-muted,#686963);font-size:11px;padding:6px;cursor:pointer}
+.studio-action-group>summary:focus-visible,.studio-model-options>summary:focus-visible,.studio-detail-toggle:focus-visible{outline:2px solid var(--studio-blue,#2754a0);outline-offset:2px}
+@media(max-width:700px){.studio-action-popover{width:min(230px,calc(100vw - 32px))}.simplified-studio .top-actions{gap:5px}.studio-action-group>summary{padding:8px 10px}}
+
+.workbench-home>header[hidden]{display:none!important} body:not(.workbench-mode) .studio-dev-only{display:none!important}
+

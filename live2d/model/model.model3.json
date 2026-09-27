@@ -1,0 +1,50 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "PiChan.moc3",
+		"Textures": [
+			"PiChan.2048/texture_00.png"
+		],
+		"Physics": "PiChan.physics3.json",
+		"DisplayInfo": "PiChan.cdi3.json",
+		"Motions": {
+			"Idle": [
+				{
+					"File": "PiChan.idle.motion3.json"
+				}
+			],
+			"Blink": [
+				{
+					"File": "PiChan.blink.motion3.json"
+				}
+			],
+			"Nod": [
+				{
+					"File": "PiChan.nod.motion3.json"
+				}
+			],
+			"Shake": [
+				{
+					"File": "PiChan.shake.motion3.json"
+				}
+			]
+		}
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "EyeBlink",
+			"Ids": [
+				"ParamEyeLOpen",
+				"ParamEyeROpen"
+			]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "LipSync",
+			"Ids": [
+				"ParamMouthOpenY"
+			]
+		}
+	]
+}

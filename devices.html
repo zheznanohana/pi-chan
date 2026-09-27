@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>派娘 · 语音设备自检</title>
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --panel: #141824;
+      --panel-2: #1b2130;
+      --line: #273044;
+      --text: #e8ecf4;
+      --muted: #94a0b8;
+      --accent: #ff8a1e;
+      --ok: #34d399;
+      --bad: #f87171;
+      --wait: #60a5fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 28px 20px 56px;
+      background: var(--bg); color: var(--text);
+      font: 14px/1.6 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 12px; padding: 16px 18px; margin-bottom: 14px;
+    }
+    .card h2 {
+      font-size: 14px; margin: 0 0 10px; display: flex;
+      align-items: center; gap: 10px; font-weight: 600;
+    }
+    .badge {
+      font-size: 11px; padding: 2px 9px; border-radius: 20px;
+      border: 1px solid var(--line); color: var(--muted); font-weight: 500;
+    }
+    .badge.ok   { color: var(--ok);   border-color: rgba(52,211,153,.4);  background: rgba(52,211,153,.08); }
+    .badge.bad  { color: var(--bad);  border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.08); }
+    .badge.wait { color: var(--wait); border-color: rgba(96,165,250,.4);  background: rgba(96,165,250,.08); }
+    select, button {
+      font: inherit; border-radius: 8px; border: 1px solid var(--line);
+      background: var(--panel-2); color: var(--text); padding: 7px 12px;
+    }
+    select { width: 100%; margin-bottom: 10px; }
+    button { cursor: pointer; }
+    button:hover:not(:disabled) { border-color: var(--accent); }
+    button:disabled { opacity: .45; cursor: default; }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #1a1205; font-weight: 600; }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .desc { color: var(--muted); font-size: 12.5px; margin: 0 0 10px; }
+    .meter { height: 8px; background: var(--panel-2); border-radius: 6px; overflow: hidden; margin: 10px 0; }
+    .meter > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--ok), var(--accent)); transition: width .06s linear; }
+    .out {
+      margin-top: 10px; padding: 10px 12px; background: #0e1219;
+      border: 1px solid var(--line); border-radius: 8px;
+      font-family: Consolas, monospace; font-size: 12.5px;
+      color: var(--muted); white-space: pre-wrap; min-height: 20px;
+    }
+    .out strong { color: var(--text); font-weight: 600; }
+    .summary { border-color: var(--accent); }
+    .summary .line { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed var(--line); }
+    .summary .line:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>语音设备自检</h1>
+  <div class="sub">这一页跑的是<strong>真实设备</strong>：真麦克风采音、真扬声器出声。程序化测试验不了这段，只能你本人跑一遍。</div>
+
+  <div class="card">
+    <h2>1. 设备枚举 <span class="badge wait" id="b1">待运行</span></h2>
+    <p class="desc">浏览器需要先拿到麦克风权限才能读到设备名称。点一下会弹权限框。</p>
+    <button class="primary" id="btnEnum">授权并列出设备</button>
+    <div style="margin-top:12px">
+      <div class="desc" style="margin:0 0 4px">输入设备（麦克风）</div>
+      <select id="selIn"><option>尚未枚举</option></select>
+      <div class="desc" style="margin:0 0 4px">输出设备（扬声器）</div>
+      <select id="selOut"><option>尚未枚举</option></select>
+    </div>
+    <div class="out" id="out1"></div>
+  </div>
+
+  <div class="card">
+    <h2>2. 麦克风采音 <span class="badge wait" id="b2">待运行</span></h2>
+    <p class="desc">用<strong>你选中的</strong>麦克风录 4 秒。对着说几句话，电平条要动起来。</p>
+    <button id="btnMic" disabled>开始录音（4 秒）</button>
+    <div class="meter"><i id="lvl"></i></div>
+    <div class="out" id="out2"></div>
+  </div>
+
+  <div class="card">
+    <h2>3. 语音识别 <span class="badge wait" id="b3">待运行</span></h2>
+    <p class="desc">把上一步录到的音频送进本地 ASR，看能不能转成文字。</p>
+    <button id="btnAsr" disabled>识别刚才的录音</button>
+    <div class="out" id="out3"></div>
+  </div>
+
+  <div class="card">
+    <h2>4. 扬声器出声 <span class="badge wait" id="b4">待运行</span></h2>
+    <p class="desc">用<strong>你选中的</strong>扬声器播一句合成语音。听得到就算过。</p>
+    <div class="row">
+      <button id="btnTts" disabled>合成并播放</button>
+      <button id="btnHeard" disabled>我听到了</button>
+      <button id="btnNot" disabled>没声音</button>
+    </div>
+    <div class="out" id="out4"></div>
+  </div>
+
+  <div class="card">
+    <h2>5. 唤醒词「小派小派」 <span class="badge wait" id="b5">待运行</span></h2>
+    <p class="desc">录 5 秒，期间清晰地说一次<strong>「小派小派」</strong>，看本地 KWS 能不能命中。</p>
+    <button id="btnWake" disabled>开始（5 秒）</button>
+    <div class="meter"><i id="lvl2"></i></div>
+    <div class="out" id="out5"></div>
+  </div>
+
+  <div class="card summary">
+    <h2>结果汇总</h2>
+    <div id="sum"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const results = { enum: null, mic: null, asr: null, spk: null, wake: null };
+const LABELS = { enum: '设备枚举', mic: '麦克风采音', asr: '语音识别', spk: '扬声器出声', wake: '唤醒词' };
+
+function setBadge(id, state, text) {
+  const el = $(id);
+  el.className = 'badge ' + (state || 'wait');
+  el.textContent = text;
+}
+function log(id, msg) { $(id).innerHTML = msg; }
+function mark(key, pass, note) {
+  results[key] = { pass, note };
+  renderSummary();
+}
+function renderSummary() {
+  $('sum').innerHTML = Object.keys(LABELS).map((k) => {
+    const r = results[k];
+    const tag = r === null
+      ? '<span class="badge wait">未测</span>'
+      : (r.pass ? '<span class="badge ok">通过</span>' : '<span class="badge bad">失败</span>');
+    const note = r && r.note ? ` <span style="color:var(--muted)">${r.note}</span>` : '';
+    return `<div class="line"><span>${LABELS[k]}${note}</span>${tag}</div>`;
+  }).join('');
+}
+renderSummary();
+
+let recordedPcm = null;   // Int16Array @16k
+let audioCtx = null;
+
+function toI16(f32) {
+  const i16 = new Int16Array(f32.length);
+  for (let i = 0; i < f32.length; i++) {
+    const v = Math.max(-1, Math.min(1, f32[i]));
+    i16[i] = v < 0 ? v * 0x8000 : v * 0x7fff;
+  }
+  return i16;
+}
+
+// 这台机器上装了一堆虚拟声卡（Steam / Oculus / Pico / Virtual Desktop / MR Link /
+// NVIDIA Virtual Audio）。它们会混在设备列表里，选错了不会报错，只是永远收不到声、
+// 也不出声。这里把它们标出来，并优先预选真实的物理设备。
+const VIRTUAL_HINTS = [
+  'steam', 'oculus', 'pico', 'virtual desktop', 'mixed reality', 'mr link',
+  'virtual audio', 'vb-audio', 'voicemeeter', 'nvidia virtual'
+];
+// 用户实际使用的设备：英特尔智音麦克风阵列 + AORUS 显示器
+const PREFER_IN  = ['英特尔', 'intel', '智音', 'smart sound', '麦克风阵列', 'microphone array'];
+const PREFER_OUT = ['aorus', 'nvidia high definition', 'cv27q'];
+
+const isVirtual = (label) => {
+  const l = (label || '').toLowerCase();
+  return VIRTUAL_HINTS.some((h) => l.includes(h));
+};
+const score = (label, prefer) => {
+  const l = (label || '').toLowerCase();
+  if (isVirtual(l)) return -1;
+  return prefer.some((p) => l.includes(p.toLowerCase())) ? 2 : 1;
+};
+function buildOptions(devs, prefer, fallbackName) {
+  const scored = devs.map((d, i) => ({
+    id: d.deviceId,
+    label: d.label || (fallbackName + ' ' + (i + 1)),
+    s: score(d.label, prefer)
+  }));
+  scored.sort((a, b) => b.s - a.s);
+  const html = scored.map((d) =>
+    `<option value="${d.id}" data-virtual="${d.s < 0}">${d.s < 0 ? '[虚拟] ' : (d.s === 2 ? '[推荐] ' : '')}${d.label}</option>`
+  ).join('');
+  return { html, best: scored[0] };
+}
+
+// ---- 1. 枚举 ----
+$('btnEnum').onclick = async () => {
+  try {
+    const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
+    probe.getTracks().forEach((t) => t.stop());
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    const ins = devs.filter((d) => d.kind === 'audioinput');
+    const outs = devs.filter((d) => d.kind === 'audiooutput');
+    $('selIn').innerHTML = ins.map((d, i) => `<option value="${d.deviceId}">${d.label || ('麦克风 ' + (i + 1))}</option>`).join('');
+    $('selOut').innerHTML = outs.map((d, i) => `<option value="${d.deviceId}">${d.label || ('扬声器 ' + (i + 1))}</option>`).join('');
+    const sinkOK = 'setSinkId' in HTMLMediaElement.prototype;
+    log('out1', `输入设备 <strong>${ins.length}</strong> 个，输出设备 <strong>${outs.length}</strong> 个\nsetSinkId 支持：<strong>${sinkOK ? '是' : '否（只能用系统默认扬声器）'}</strong>`);
+    setBadge('b1', ins.length ? 'ok' : 'bad', ins.length ? '通过' : '无输入设备');
+    mark('enum', ins.length > 0, `${ins.length} 进 / ${outs.length} 出`);
+    $('btnMic').disabled = false;
+    $('btnTts').disabled = false;
+    $('btnWake').disabled = false;
+  } catch (e) {
+    log('out1', '失败：' + e.message);
+    setBadge('b1', 'bad', '失败');
+    mark('enum', false, e.name);
+  }
+};
+
+// ---- 通用录音 ----
+async function record(seconds, meterId) {
+  const deviceId = $('selIn').value;
+  const audio = { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true };
+  if (deviceId && deviceId !== 'default') audio.deviceId = { exact: deviceId };
+  const stream = await navigator.mediaDevices.getUserMedia({ audio, video: false });
+  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  if (audioCtx.state === 'suspended') await audioCtx.resume();
+  const src = audioCtx.createMediaStreamSource(stream);
+  const proc = audioCtx.createScriptProcessor(2048, 1, 1);
+  const chunks = [];
+  let peak = 0;
+  proc.onaudioprocess = (e) => {
+    const inp = e.inputBuffer.getChannelData(0);
+    chunks.push(new Float32Array(inp));
+    let m = 0;
+    for (let i = 0; i < inp.length; i++) m = Math.max(m, Math.abs(inp[i]));
+    peak = Math.max(peak, m);
+    $(meterId).style.width = Math.min(100, m * 180) + '%';
+  };
+  const mute = audioCtx.createGain(); mute.gain.value = 0;
+  src.connect(proc); proc.connect(mute); mute.connect(audioCtx.destination);
+  await new Promise((r) => setTimeout(r, seconds * 1000));
+  proc.disconnect(); mute.disconnect(); src.disconnect();
+  stream.getTracks().forEach((t) => t.stop());
+  $(meterId).style.width = '0%';
+  const total = chunks.reduce((a, c) => a + c.length, 0);
+  const all = new Float32Array(total);
+  let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
+  return { pcm: toI16(all), peak, seconds: total / 16000, label: $('selIn').selectedOptions[0]?.textContent };
+}
+
+// ---- 2. 麦克风 ----
+$('btnMic').onclick = async () => {
+  $('btnMic').disabled = true;
+  log('out2', '录音中…请说话');
+  try {
+    const r = await record(4, 'lvl');
+    recordedPcm = r.pcm;
+    const ok = r.peak > 0.02;
+    log('out2', `设备：<strong>${r.label}</strong>\n时长 <strong>${r.seconds.toFixed(2)}s</strong>，采样 ${r.pcm.length}\n峰值电平 <strong>${r.peak.toFixed(4)}</strong>　${ok ? '（有信号）' : '（几乎静音 —— 麦克风没拾到声音）'}`);
+    setBadge('b2', ok ? 'ok' : 'bad', ok ? '通过' : '无信号');
+    mark('mic', ok, `峰值 ${r.peak.toFixed(3)}`);
+    $('btnAsr').disabled = !ok;
+  } catch (e) {
+    log('out2', '失败：' + e.message);
+    setBadge('b2', 'bad', '失败'); mark('mic', false, e.name);
+  }
+  $('btnMic').disabled = false;
+};
+
+// ---- 3. ASR ----
+$('btnAsr').onclick = async () => {
+  $('btnAsr').disabled = true;
+  log('out3', '识别中…');
+  try {
+    const ws = new WebSocket(`ws://${location.host}/ws/audio`);
+    ws.binaryType = 'arraybuffer';
+    let partial = '', final = '';
+    const done = new Promise((resolve) => {
+      ws.onmessage = (ev) => {
+        try {
+          const m = JSON.parse(ev.data);
+          if (m.type === 'asr_partial') { partial = m.text || partial; log('out3', '识别中：' + partial); }
+          if (m.type === 'asr_final') { final = m.text || partial; resolve(); }
+        } catch (e) { /* 二进制帧忽略 */ }
+      };
+      setTimeout(resolve, 9000);
+    });
+    await new Promise((r) => { ws.onopen = r; ws.onerror = r; });
+    const CH = 4096;
+    for (let i = 0; i < recordedPcm.length; i += CH / 2) {
+      ws.send(recordedPcm.buffer.slice(i * 2, Math.min((i + CH / 2) * 2, recordedPcm.byteLength)));
+      await new Promise((r) => setTimeout(r, 12));
+    }
+    await done;
+    ws.close();
+    const text = (final || partial || '').trim();
+    log('out3', text ? `识别结果：<strong>${text}</strong>` : '没识别出内容（可能声音太小或没说话）');
+    setBadge('b3', text ? 'ok' : 'bad', text ? '通过' : '无结果');
+    mark('asr', !!text, text ? '「' + text.slice(0, 12) + '」' : '');
+  } catch (e) {
+    log('out3', '失败：' + e.message);
+    setBadge('b3', 'bad', '失败'); mark('asr', false, e.name);
+  }
+  $('btnAsr').disabled = false;
+};
+
+// ---- 4. 扬声器 ----
+$('btnTts').onclick = async () => {
+  $('btnTts').disabled = true;
+  log('out4', '合成中…');
+  try {
+    const res = await fetch('/api/tts/synthesize', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: '设备自检，这是从你选中的扬声器播放的声音。' })
+    });
+    const data = await res.json();
+    const url = data.url || data.wav || data.file;
+    const el = new Audio(url ? (url.startsWith('http') ? url : '/' + url.replace(/^\.?\//, '')) : '/tts-sample.wav');
+    const sink = $('selOut').value;
+    if (sink && sink !== 'default' && el.setSinkId) {
+      try { await el.setSinkId(sink); } catch (e) { log('out4', '扬声器切换失败（用默认设备播放）：' + e.message); }
+    }
+    await el.play();
+    log('out4', `正在播放：<strong>${$('selOut').selectedOptions[0]?.textContent || '默认扬声器'}</strong>\n听到声音请点「我听到了」。`);
+    setBadge('b4', 'wait', '等你确认');
+    $('btnHeard').disabled = false; $('btnNot').disabled = false;
+  } catch (e) {
+    log('out4', '失败：' + e.message);
+    setBadge('b4', 'bad', '失败'); mark('spk', false, e.name);
+  }
+  $('btnTts').disabled = false;
+};
+$('btnHeard').onclick = () => { setBadge('b4', 'ok', '通过'); mark('spk', true, '人工确认'); };
+$('btnNot').onclick  = () => { setBadge('b4', 'bad', '没声音'); mark('spk', false, '人工确认'); };
+
+// ---- 5. 唤醒词 ----
+$('btnWake').onclick = async () => {
+  $('btnWake').disabled = true;
+  log('out5', '录音中…请说「小派小派」');
+  try {
+    const r = await record(5, 'lvl2');
+    log('out5', `录到 ${r.seconds.toFixed(2)}s（峰值 ${r.peak.toFixed(3)}），送去判定…`);
+    const res = await fetch('/api/wake/test', {
+      method: 'POST', headers: { 'Content-Type': 'application/octet-stream' },
+      body: r.pcm.buffer
+    });
+    if (!res.ok) throw new Error('服务端没有 /api/wake/test 接口（HTTP ' + res.status + '）');
+    const data = await res.json();
+    const hit = !!data.detected;
+    log('out5', hit
+      ? `<strong>命中：${data.keyword || '小派小派'}</strong>`
+      : '没命中。可以再试一次，说得清晰一点、离麦克风近一点。');
+    setBadge('b5', hit ? 'ok' : 'bad', hit ? '通过' : '未命中');
+    mark('wake', hit, hit ? '' : '未命中');
+  } catch (e) {
+    log('out5', '失败：' + e.message);
+    setBadge('b5', 'bad', '失败'); mark('wake', false, e.name);
+  }
+  $('btnWake').disabled = false;
+};
+</script>
+</body>
+</html>

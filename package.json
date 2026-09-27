@@ -1,0 +1,24 @@
+{
+  "scripts": {
+    "pet": "electron pet/main.js",
+    "start": "node harness-server.js",
+    "test:dispatch": "node --test tools/test-development-dispatch.cjs tools/test-development-results-extension.cjs tools/test-development-feedback.cjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "4.3.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@modelcontextprotocol/server-memory": "2026.8.31",
+    "@soullink-emotion/engine": "^0.1.0-beta.1",
+    "@soullink-emotion/profile-generator": "^0.1.0-beta.1",
+    "sherpa-onnx-node": "^1.13.8",
+    "silk-wasm": "3.7.1",
+    "ws": "^8.21.3"
+  },
+  "devDependencies": {
+    "electron": "^44.4.3"
+  },
+  "name": "pi-chan",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pi-based anime AI companion: voice chat to prototypes"
+}

@@ -1,0 +1,125 @@
+{
+  "frames": [
+    {
+      "file": "frame_001.png",
+      "greenPixels": 0,
+      "opaquePixels": 32500
+    },
+    {
+      "file": "frame_002.png",
+      "greenPixels": 0,
+      "opaquePixels": 32258
+    },
+    {
+      "file": "frame_003.png",
+      "greenPixels": 0,
+      "opaquePixels": 32492
+    },
+    {
+      "file": "frame_004.png",
+      "greenPixels": 0,
+      "opaquePixels": 32245
+    },
+    {
+      "file": "frame_005.png",
+      "greenPixels": 0,
+      "opaquePixels": 32109
+    },
+    {
+      "file": "frame_006.png",
+      "greenPixels": 0,
+      "opaquePixels": 32331
+    },
+    {
+      "file": "frame_007.png",
+      "greenPixels": 0,
+      "opaquePixels": 33178
+    },
+    {
+      "file": "frame_008.png",
+      "greenPixels": 0,
+      "opaquePixels": 32803
+    },
+    {
+      "file": "frame_009.png",
+      "greenPixels": 0,
+      "opaquePixels": 33193
+    },
+    {
+      "file": "frame_010.png",
+      "greenPixels": 0,
+      "opaquePixels": 32763
+    },
+    {
+      "file": "frame_011.png",
+      "greenPixels": 0,
+      "opaquePixels": 33113
+    },
+    {
+      "file": "frame_012.png",
+      "greenPixels": 0,
+      "opaquePixels": 33348
+    },
+    {
+      "file": "frame_013.png",
+      "greenPixels": 0,
+      "opaquePixels": 33138
+    },
+    {
+      "file": "frame_014.png",
+      "greenPixels": 0,
+      "opaquePixels": 33193
+    },
+    {
+      "file": "frame_015.png",
+      "greenPixels": 0,
+      "opaquePixels": 32769
+    },
+    {
+      "file": "frame_016.png",
+      "greenPixels": 0,
+      "opaquePixels": 32572
+    },
+    {
+      "file": "frame_017.png",
+      "greenPixels": 0,
+      "opaquePixels": 32553
+    },
+    {
+      "file": "frame_018.png",
+      "greenPixels": 0,
+      "opaquePixels": 32181
+    },
+    {
+      "file": "frame_019.png",
+      "greenPixels": 0,
+      "opaquePixels": 33662
+    },
+    {
+      "file": "frame_020.png",
+      "greenPixels": 0,
+      "opaquePixels": 33142
+    },
+    {
+      "file": "frame_021.png",
+      "greenPixels": 0,
+      "opaquePixels": 33457
+    },
+    {
+      "file": "frame_022.png",
+      "greenPixels": 0,
+      "opaquePixels": 33621
+    },
+    {
+      "file": "frame_023.png",
+      "greenPixels": 0,
+      "opaquePixels": 33326
+    },
+    {
+      "file": "frame_024.png",
+      "greenPixels": 0,
+      "opaquePixels": 33426
+    }
+  ],
+  "gifFrames": 24
+}

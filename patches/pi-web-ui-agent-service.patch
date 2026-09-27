@@ -1,0 +1,12 @@
+diff --git a/server/agent-service.ts b/server/agent-service.ts
+index e510206..9c738b7 100644
+--- a/server/agent-service.ts
++++ b/server/agent-service.ts
+@@ -2444,6 +2444,7 @@ export class ClientSession {
+ 				// 末尾（此时主会话的自定义 prompt 不再叠加，角色由模板定义）；非空
+ 				// 白名单取代主会话开关（只启用这些），空白名单 = 跟随主会话。
+ 				resourceLoaderOptions: {
++                    additionalExtensionPaths: process.env.PICHAN_APP_ROOT ? ['auto-skills.ts','project-memory.ts'].map(name => join(process.env.PICHAN_APP_ROOT!, '.pi', 'extensions', name)).filter(existsSync) : [],
+ 					// 系统提示词 base：主会话（组合模板）恒返回 undefined → SDK 走默认分支，
+ 					// 工具列表/Guidelines/文档指引等自动段照常拼装；SYSTEM.md 内容仅在
+ 					// 此处捕获（lastBaseSystemPrompt）作 {{soul}} 自动内容。子代理模板
