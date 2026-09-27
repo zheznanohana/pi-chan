@@ -1,6 +1,7 @@
 # Release checks — 2026-09-27
 
 - Gitleaks 8.30.1 directory scan, with redacted reporting: **zero findings**. Download checksum checked before executing the scanner.
+- Git history scan additionally flags ten SoulLink facial Action Unit names as generic keys. Each was reviewed against its animation definition; `.gitleaks.toml` exempts only those exact identifiers in that one file, retaining all default secret rules.
 - Node syntax checks: **167 JavaScript/CommonJS files passed** (bundled vendor files excluded).
 - Development dispatch, source-bound feedback and result-extension tests: **7 passed**.
 - Memory governance and memory service tests: **9 passed**, including **27 internal memory-service assertions**.

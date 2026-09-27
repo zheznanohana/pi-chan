@@ -1,0 +1,11 @@
+title = "Pi-chan public source scanning"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Reviewed SoulLink facial Action Unit identifiers, not API keys"
+condition = "AND"
+paths = ['''(^|/)soullink-engine\.browser\.js$''']
+regexTarget = "secret"
+regexes = ['''^au(01InnerBrowRaiser|02OuterBrowRaiser|07LidTightener|09NoseWrinkler|15LipCornerDepressor|17ChinRaiser|18LipPucker|20LipStretcher|23LipTightener|24LipPressor)$''']
