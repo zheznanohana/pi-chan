@@ -9,7 +9,23 @@ import os
 import json
 import subprocess
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
+
+PRIVATE_STATIC_DIRS = {
+    "memory", "data", "backups", "external", "integration", "tools",
+    "audio-debug", "tts-env", "node_modules", "__pycache__",
+    "speaker-eval", "aishell3-sweep",
+}
+PUBLIC_STATIC_EXTS = {
+    ".html", ".css", ".js", ".mjs", ".json", ".png", ".jpg", ".jpeg",
+    ".webp", ".gif", ".ico", ".svg", ".moc3", ".wasm", ".wav", ".mp3",
+    ".mp4", ".webm", ".woff", ".woff2", ".ttf",
+}
+PRIVATE_STATIC_JS = {
+    "harness-server.js", "asr-engine.js", "tts-engine.js", "english-tts.js",
+    "jev-agent.js", "main.js", "preload.js", "dashboard-preload.js", "wake-engine.js",
+}
+MAX_POST_BYTES = 1048576
 
 # Ensure UTF-8 output
 if sys.platform == "win32":
@@ -31,10 +47,98 @@ class PiChanHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=os.path.dirname(os.path.abspath(__file__)), **kwargs)
 
+    def _check_request(self, is_post=False):
+        if self.client_address[0] not in ("127.0.0.1", "::1", "::ffff:127.0.0.1"):
+            self.send_json({"error": "Loopback only"}, 403)
+            return False
+        host_header = self.headers.get("Host", "")
+        try:
+            parsed_host = urlparse(f"http://{host_header}")
+            hostname = parsed_host.hostname
+        except Exception:
+            hostname = None
+        if hostname not in ("127.0.0.1", "localhost", "::1"):
+            self.send_json({"error": "Invalid Host"}, 403)
+            return False
+        if self.headers.get("Sec-Fetch-Site") == "cross-site":
+            self.send_json({"error": "Cross-site blocked"}, 403)
+            return False
+        origin = self.headers.get("Origin")
+        if origin is not None:
+            try:
+                po = urlparse(origin)
+            except Exception:
+                self.send_json({"error": "Invalid Origin"}, 403)
+                return False
+            if po.scheme != "pet" and not (po.scheme in ("http", "https") and po.netloc == host_header):
+                self.send_json({"error": "Origin mismatch"}, 403)
+                return False
+        if is_post:
+            ctype = (self.headers.get("Content-Type") or "").lower()
+            if ctype.startswith("application/x-www-form-urlencoded"):
+                self.send_json({"error": "Form submissions rejected"}, 403)
+                return False
+            try:
+                cl = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                self.send_json({"error": "Invalid Content-Length"}, 400)
+                return False
+            if cl < 0 or cl > MAX_POST_BYTES:
+                self.send_json({"error": "Payload too large"}, 413)
+                return False
+        return True
+
+    def _is_allowed_static(self):
+        raw_path = unquote(urlparse(self.path).path)
+        if "\\" in raw_path or "\x00" in raw_path:
+            return False
+        segments = [s for s in raw_path.split("/") if s]
+        if any(s in (".", "..") or s.startswith(".") or s.lower() in PRIVATE_STATIC_DIRS for s in segments):
+            return False
+        if not segments:
+            return True
+        name = segments[-1].lower()
+        _, ext = os.path.splitext(name)
+        if ext not in PUBLIC_STATIC_EXTS or name in PRIVATE_STATIC_JS:
+            return False
+        if ext == ".json" and raw_path != "/soullink.profile.json" and segments[0].lower() not in ("assets", "live2d", "character", "models", "vendor"):
+            return False
+        return True
+
+    def do_OPTIONS(self):
+        if not self._check_request():
+            return
+        self.send_response(204)
+        origin = self.headers.get("Origin")
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def do_GET(self):
+        if not self._check_request():
+            return
+        if not self._is_allowed_static():
+            self.send_error(404, "Not Found")
+            return
+        super().do_GET()
+
+    def do_HEAD(self):
+        if not self._check_request():
+            return
+        if not self._is_allowed_static():
+            self.send_error(404, "Not Found")
+            return
+        super().do_HEAD()
+
     def do_POST(self):
+        if not self._check_request(is_post=True):
+            return
         parsed = urlparse(self.path)
-        content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length).decode("utf-8")
+        content_length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(content_length).decode("utf-8", errors="replace") if content_length else ""
         
         try:
             data = json.loads(body) if body else {}
@@ -57,7 +161,10 @@ class PiChanHandler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(res)))
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin")
+        if origin:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
         self.end_headers()
         self.wfile.write(res)
 

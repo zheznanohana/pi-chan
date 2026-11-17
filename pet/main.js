@@ -9,6 +9,25 @@ app.setName('pi-chan-desktop-pet');
 const { SharedState } = require('./shared-state.cjs');
 const { WakeEngine } = require('./wake-engine');
 const { moveWindowBy } = require('./window-geometry.cjs');
+const { staticPath } = require('../static-files.cjs');
+
+function isTrustedUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return false;
+  try {
+    const u = new URL(rawUrl);
+    if (u.protocol === 'pet:') return true;
+    return u.protocol === 'http:' && (u.hostname === '127.0.0.1' || u.hostname === 'localhost') && (!u.port || u.port === '31415');
+  } catch {
+    return false;
+  }
+}
+
+function hardenWindow(win) {
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (event, targetUrl) => {
+    if (!isTrustedUrl(targetUrl)) event.preventDefault();
+  });
+}
 
 // 全身 / 半身两档取景。顶部预留 68px 给头顶气泡，所以比纯立绘高一些。
 const VIEW_SIZES = { full: { w: 300, h: 300 }, portrait: { w: 260, h: 250 } };
@@ -137,6 +156,7 @@ function createDashboardWindow(url) {
     },
   });
   dashboardWindow.loadURL(url);
+  hardenWindow(dashboardWindow);
   dashboardWindow.on('closed', () => { dashboardWindow = null; if(shared.value.captureOwner==='dashboard')shared.patch({captureOwner:null,speaking:false,mouth:0}); });
   return dashboardWindow;
 }
@@ -398,6 +418,7 @@ function createWindow() {
   }
 
   mainWindow.loadURL('http://127.0.0.1:31415/pet/pet.html');
+  hardenWindow(mainWindow);
 
   mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
     console.log(`[Renderer ${level}] ${message} (${sourceId}:${line})`);
@@ -536,23 +557,28 @@ if (!gotSingleLock) {
     // Register protocol handler for pet://app/...
     const rootDir = path.resolve(__dirname, '..');
     protocol.handle('pet', (request) => {
-      const parsed = new URL(request.url);
-      const relativePath = path.posix.normalize(parsed.pathname);
-      const filePath = path.join(rootDir, relativePath);
+      let filePath = null;
+      try {
+        filePath = staticPath(rootDir, new URL(request.url).pathname);
+      } catch {}
+      if (!filePath) return new Response('Not Found', { status: 404 });
       return net.fetch(url.pathToFileURL(filePath).toString());
     });
 
     // 程序化放行麦克风 / 扬声器。Electron 不像浏览器那样必须由用户点弹窗，
     // 这里直接对本地页面放行，桌宠和仪表盘都不会再卡在授权上。
     const { session } = require('electron');
-    const ALLOWED = new Set(['media', 'audioCapture', 'mediaKeySystem']);
-    session.defaultSession.setPermissionRequestHandler((wc, permission, callback) => {
-      callback(ALLOWED.has(permission));
+    const ALLOWED = new Set(['media', 'audioCapture']);
+    session.defaultSession.setPermissionRequestHandler((wc, permission, callback, details) => {
+      const originUrl = details?.requestingUrl || details?.securityOrigin || wc?.getURL?.() || '';
+      callback(ALLOWED.has(permission) && isTrustedUrl(originUrl));
     });
-    session.defaultSession.setPermissionCheckHandler((wc, permission) => ALLOWED.has(permission));
+    session.defaultSession.setPermissionCheckHandler((wc, permission, requestingOrigin) => {
+      return ALLOWED.has(permission) && isTrustedUrl(requestingOrigin || wc?.getURL?.() || '');
+    });
     // 设备枚举也要放行，否则拿不到真实设备名（只会显示「麦克风设备 1」这种占位名）
     if (session.defaultSession.setDevicePermissionHandler) {
-      session.defaultSession.setDevicePermissionHandler(() => true);
+      session.defaultSession.setDevicePermissionHandler((details) => isTrustedUrl(details?.securityOrigin || ''));
     }
 
     listeningEnabled=!recoveryMuted && shared.value.voiceSettings?.asrEnabled!==false;

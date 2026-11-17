@@ -133,6 +133,9 @@ function setBadge(id, state, text) {
   el.className = 'badge ' + (state || 'wait');
   el.textContent = text;
 }
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 function log(id, msg) { $(id).innerHTML = msg; }
 function mark(key, pass, note) {
   results[key] = { pass, note };
@@ -144,7 +147,7 @@ function renderSummary() {
     const tag = r === null
       ? '<span class="badge wait">未测</span>'
       : (r.pass ? '<span class="badge ok">通过</span>' : '<span class="badge bad">失败</span>');
-    const note = r && r.note ? ` <span style="color:var(--muted)">${r.note}</span>` : '';
+    const note = r && r.note ? ` <span style="color:var(--muted)">${esc(r.note)}</span>` : '';
     return `<div class="line"><span>${LABELS[k]}${note}</span>${tag}</div>`;
   }).join('');
 }
@@ -190,7 +193,7 @@ function buildOptions(devs, prefer, fallbackName) {
   }));
   scored.sort((a, b) => b.s - a.s);
   const html = scored.map((d) =>
-    `<option value="${d.id}" data-virtual="${d.s < 0}">${d.s < 0 ? '[虚拟] ' : (d.s === 2 ? '[推荐] ' : '')}${d.label}</option>`
+    `<option value="${esc(d.id)}" data-virtual="${d.s < 0}">${d.s < 0 ? '[虚拟] ' : (d.s === 2 ? '[推荐] ' : '')}${esc(d.label)}</option>`
   ).join('');
   return { html, best: scored[0] };
 }
@@ -203,8 +206,8 @@ $('btnEnum').onclick = async () => {
     const devs = await navigator.mediaDevices.enumerateDevices();
     const ins = devs.filter((d) => d.kind === 'audioinput');
     const outs = devs.filter((d) => d.kind === 'audiooutput');
-    $('selIn').innerHTML = ins.map((d, i) => `<option value="${d.deviceId}">${d.label || ('麦克风 ' + (i + 1))}</option>`).join('');
-    $('selOut').innerHTML = outs.map((d, i) => `<option value="${d.deviceId}">${d.label || ('扬声器 ' + (i + 1))}</option>`).join('');
+    $('selIn').innerHTML = ins.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || ('麦克风 ' + (i + 1)))}</option>`).join('');
+    $('selOut').innerHTML = outs.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || ('扬声器 ' + (i + 1)))}</option>`).join('');
     const sinkOK = 'setSinkId' in HTMLMediaElement.prototype;
     log('out1', `输入设备 <strong>${ins.length}</strong> 个，输出设备 <strong>${outs.length}</strong> 个\nsetSinkId 支持：<strong>${sinkOK ? '是' : '否（只能用系统默认扬声器）'}</strong>`);
     setBadge('b1', ins.length ? 'ok' : 'bad', ins.length ? '通过' : '无输入设备');
@@ -213,7 +216,7 @@ $('btnEnum').onclick = async () => {
     $('btnTts').disabled = false;
     $('btnWake').disabled = false;
   } catch (e) {
-    log('out1', '失败：' + e.message);
+    log('out1', '失败：' + esc(e.message));
     setBadge('b1', 'bad', '失败');
     mark('enum', false, e.name);
   }
@@ -259,12 +262,12 @@ $('btnMic').onclick = async () => {
     const r = await record(4, 'lvl');
     recordedPcm = r.pcm;
     const ok = r.peak > 0.02;
-    log('out2', `设备：<strong>${r.label}</strong>\n时长 <strong>${r.seconds.toFixed(2)}s</strong>，采样 ${r.pcm.length}\n峰值电平 <strong>${r.peak.toFixed(4)}</strong>　${ok ? '（有信号）' : '（几乎静音 —— 麦克风没拾到声音）'}`);
+    log('out2', `设备：<strong>${esc(r.label)}</strong>\n时长 <strong>${r.seconds.toFixed(2)}s</strong>，采样 ${r.pcm.length}\n峰值电平 <strong>${r.peak.toFixed(4)}</strong>　${ok ? '（有信号）' : '（几乎静音 —— 麦克风没拾到声音）'}`);
     setBadge('b2', ok ? 'ok' : 'bad', ok ? '通过' : '无信号');
     mark('mic', ok, `峰值 ${r.peak.toFixed(3)}`);
     $('btnAsr').disabled = !ok;
   } catch (e) {
-    log('out2', '失败：' + e.message);
+    log('out2', '失败：' + esc(e.message));
     setBadge('b2', 'bad', '失败'); mark('mic', false, e.name);
   }
   $('btnMic').disabled = false;
@@ -282,7 +285,7 @@ $('btnAsr').onclick = async () => {
       ws.onmessage = (ev) => {
         try {
           const m = JSON.parse(ev.data);
-          if (m.type === 'asr_partial') { partial = m.text || partial; log('out3', '识别中：' + partial); }
+          if (m.type === 'asr_partial') { partial = m.text || partial; log('out3', '识别中：' + esc(partial)); }
           if (m.type === 'asr_final') { final = m.text || partial; resolve(); }
         } catch (e) { /* 二进制帧忽略 */ }
       };
@@ -297,11 +300,11 @@ $('btnAsr').onclick = async () => {
     await done;
     ws.close();
     const text = (final || partial || '').trim();
-    log('out3', text ? `识别结果：<strong>${text}</strong>` : '没识别出内容（可能声音太小或没说话）');
+    log('out3', text ? `识别结果：<strong>${esc(text)}</strong>` : '没识别出内容（可能声音太小或没说话）');
     setBadge('b3', text ? 'ok' : 'bad', text ? '通过' : '无结果');
     mark('asr', !!text, text ? '「' + text.slice(0, 12) + '」' : '');
   } catch (e) {
-    log('out3', '失败：' + e.message);
+    log('out3', '失败：' + esc(e.message));
     setBadge('b3', 'bad', '失败'); mark('asr', false, e.name);
   }
   $('btnAsr').disabled = false;
@@ -321,14 +324,14 @@ $('btnTts').onclick = async () => {
     const el = new Audio(url ? (url.startsWith('http') ? url : '/' + url.replace(/^\.?\//, '')) : '/tts-sample.wav');
     const sink = $('selOut').value;
     if (sink && sink !== 'default' && el.setSinkId) {
-      try { await el.setSinkId(sink); } catch (e) { log('out4', '扬声器切换失败（用默认设备播放）：' + e.message); }
+      try { await el.setSinkId(sink); } catch (e) { log('out4', '扬声器切换失败（用默认设备播放）：' + esc(e.message)); }
     }
     await el.play();
-    log('out4', `正在播放：<strong>${$('selOut').selectedOptions[0]?.textContent || '默认扬声器'}</strong>\n听到声音请点「我听到了」。`);
+    log('out4', `正在播放：<strong>${esc($('selOut').selectedOptions[0]?.textContent || '默认扬声器')}</strong>\n听到声音请点「我听到了」。`);
     setBadge('b4', 'wait', '等你确认');
     $('btnHeard').disabled = false; $('btnNot').disabled = false;
   } catch (e) {
-    log('out4', '失败：' + e.message);
+    log('out4', '失败：' + esc(e.message));
     setBadge('b4', 'bad', '失败'); mark('spk', false, e.name);
   }
   $('btnTts').disabled = false;
@@ -351,12 +354,12 @@ $('btnWake').onclick = async () => {
     const data = await res.json();
     const hit = !!data.detected;
     log('out5', hit
-      ? `<strong>命中：${data.keyword || '小派小派'}</strong>`
+      ? `<strong>命中：${esc(data.keyword || '小派小派')}</strong>`
       : '没命中。可以再试一次，说得清晰一点、离麦克风近一点。');
     setBadge('b5', hit ? 'ok' : 'bad', hit ? '通过' : '未命中');
     mark('wake', hit, hit ? '' : '未命中');
   } catch (e) {
-    log('out5', '失败：' + e.message);
+    log('out5', '失败：' + esc(e.message));
     setBadge('b5', 'bad', '失败'); mark('wake', false, e.name);
   }
   $('btnWake').disabled = false;

@@ -60,15 +60,28 @@ function checkLocalSafety(req) {
     throw Object.assign(new Error('MCP API only accessible locally'), { status: 403 });
   }
 
-  if (req.headers.origin && req.headers.host) {
+  let host;
+  try {
+    host = new URL('http://' + (req.headers?.host || ''));
+  } catch {
+    throw Object.assign(new Error('Invalid Host header'), { status: 403 });
+  }
+  if (!['localhost', '127.0.0.1', '[::1]'].includes(host.hostname)) {
+    throw Object.assign(new Error('Non-loopback Host rejected'), { status: 403 });
+  }
+  if (req.headers?.['sec-fetch-site'] === 'cross-site') {
+    throw Object.assign(new Error('Cross-site request blocked'), { status: 403 });
+  }
+
+  if (req.headers?.origin !== undefined) {
+    let origin;
     try {
-      const originHost = new URL(req.headers.origin).host;
-      if (originHost !== req.headers.host) {
-        throw Object.assign(new Error('Origin host mismatch'), { status: 403 });
-      }
-    } catch (e) {
-      if (e.status) throw e;
-      throw Object.assign(new Error('Invalid Origin header'), { status: 400 });
+      origin = new URL(req.headers.origin);
+    } catch {
+      throw Object.assign(new Error('Invalid Origin header'), { status: 403 });
+    }
+    if (origin.protocol !== 'pet:' && origin.origin !== host.origin) {
+      throw Object.assign(new Error('Origin host mismatch'), { status: 403 });
     }
   }
 }

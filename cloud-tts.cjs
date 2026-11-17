@@ -64,11 +64,17 @@ function saveConfig(input){
  return publicFrom(store,model);
 }
 function checkRequest(req){
- if(!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress))throw error('仅支持本机访问',403);
- let host;try{host=new URL('http://'+req.headers.host);}catch{throw error('Host无效',403);}
+ if(!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket?.remoteAddress))throw error('仅支持本机访问',403);
+ let host;try{host=new URL('http://'+(req.headers?.host||''));}catch{throw error('Host无效',403);}
  if(!['localhost','127.0.0.1','[::1]'].includes(host.hostname))throw error('仅接受本机Host',403);
- if(req.headers.origin){let origin;try{origin=new URL(req.headers.origin);}catch{throw error('来源无效',403);}if(origin.origin!==host.origin)throw error('跨来源请求已拦截',403);}
- if(req.headers['sec-fetch-site']==='cross-site')throw error('跨站请求已拦截',403);
+ if(req.headers?.['sec-fetch-site']==='cross-site')throw error('跨站请求已拦截',403);
+ if(req.headers?.origin!==undefined){let origin;try{origin=new URL(req.headers.origin);}catch{throw error('来源无效',403);}if(origin.protocol!=='pet:'&&origin.origin!==host.origin)throw error('跨来源请求已拦截',403);}
+ if(!['GET','HEAD','OPTIONS'].includes(req.method)&&String(req.headers?.['content-type']||'').toLowerCase().startsWith('application/x-www-form-urlencoded'))throw error('不支持表单提交',403);
+}
+function corsHeaders(req){
+ if(!req.headers?.origin)return {};
+ try{checkRequest(req);}catch{return {};}
+ return {'Access-Control-Allow-Origin':req.headers.origin,'Vary':'Origin','Access-Control-Allow-Methods':'GET, POST, PUT, PATCH, DELETE, OPTIONS','Access-Control-Allow-Headers':'Content-Type'};
 }
 async function handle(req,res,url){
  if(url.pathname!=='/api/tts/cloud')return false;
@@ -188,4 +194,4 @@ async function synthesizeTokenPlan(config,text,options){
   throw error('Token Plan'+stage+'失败'+(known.has(code)?'（'+code+'）':'')+(samples?'；已收到部分音频':'；尚未收到音频'),502);
  }finally{clearTimeout(timeout);options.signal?.removeEventListener('abort',abort);if(reader)try{await reader.cancel();reader.releaseLock();}catch{}controller.abort();}
 }
-module.exports={handle,getProfile,publicConfig,saveConfig,synthesize,configFile,checkRequest};
+module.exports={handle,getProfile,publicConfig,saveConfig,synthesize,configFile,checkRequest,corsHeaders};

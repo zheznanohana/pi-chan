@@ -270,7 +270,49 @@ const botAuto=require('./integration/bot-auto.cjs').createBotAuto({
     prepare:async(botId,text)=>{const botRoot=path.join(DIR,'data/bot-workspaces',botId);fs.mkdirSync(botRoot,{recursive:true});memory.ensureProject({id:botId,name:'共享会话项目 '+botId.slice(-8),root:botRoot});memoryContext.bind(botId,botId,true);return (await memoryContext.retrieve({sessionId:botId,query:text,candidateComplete:text.length<=4000})).text;}
   })
 });
+function readJsonBody(req, maxBytes = 1048576) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let bytes = 0, settled = false;
+    req.on("data", chunk => {
+      if (settled) return;
+      bytes += Buffer.byteLength(chunk);
+      if (bytes > maxBytes) {
+        settled = true;
+        reject(Object.assign(new Error("请求体过大"), { status: 413 }));
+        req.resume();
+        return;
+      }
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    req.on("end", () => {
+      if (settled) return;
+      settled = true;
+      try {
+        const raw = Buffer.concat(chunks).toString("utf8");
+        resolve(raw ? JSON.parse(raw) : {});
+      } catch {
+        reject(Object.assign(new Error("JSON格式无效"), { status: 400 }));
+      }
+    });
+    req.on("error", err => { if (!settled) { settled = true; reject(err); } });
+  });
+}
+
 const server = http.createServer((req, res) => {
+  const { checkRequest, corsHeaders } = require('./cloud-tts.cjs');
+  try {
+    checkRequest(req);
+  } catch (e) {
+    res.writeHead(e.status || 403, { 'Content-Type': 'application/json; charset=utf-8' });
+    res.end(JSON.stringify({ error: e.message }));
+    return;
+  }
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, corsHeaders(req));
+    res.end();
+    return;
+  }
   if(workbench.proxy(req,res))return;
   const parsedUrl = new URL(req.url, `http://localhost:${PORT}`);
   const pathname = parsedUrl.pathname;
@@ -359,7 +401,7 @@ const server = http.createServer((req, res) => {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       "Connection": "keep-alive",
-      "Access-Control-Allow-Origin": "*"
+      ...require("./cloud-tts.cjs").corsHeaders(req)
     });
     res.write("\n");
     sseClients.add(res);
@@ -425,11 +467,9 @@ const server = http.createServer((req, res) => {
 
   // 2. API: Send Prompt to Dual-Agent Pipeline (Jev Router -> Pi Harness)
   if (pathname === "/api/prompt" && req.method === "POST") {
-    let body = "";
-    req.on("data", c => body += c);
-    req.on("end", async () => {
+    (async () => {
       try {
-        const { message, projectId='default', memoryEnabled=true } = JSON.parse(body);
+        const { message, projectId='default', memoryEnabled=true } = await readJsonBody(req, 262144);
         if(typeof message!=='string'||!message.trim())throw new Error('Empty message');
         if(typeof message==='string'&&/^\/model(?:\s|$)/i.test(message.trim())){
           const state=await chatModels.current();
@@ -450,20 +490,18 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true }));
       } catch (err) {
-        res.writeHead(500, { "Content-Type": "application/json" });
+        res.writeHead(err.status || 500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: err.message }));
       }
-    });
+    })();
     return;
   }
 
   // 2b. API: Direct Agent Message (from Pet Wake Engine / IPC)
   if (pathname === "/api/agent/message" && req.method === "POST") {
-    let body = "";
-    req.on("data", c => body += c);
-    req.on("end", async () => {
+    (async () => {
       try {
-        const { message, source } = JSON.parse(body || "{}");
+        const { message } = await readJsonBody(req, 262144);
         if(typeof message==='string'&&/^\/model(?:\s|$)/i.test(message.trim())){
           const state=await chatModels.current();
           res.writeHead(200,{'Content-Type':'application/json'});
@@ -483,10 +521,10 @@ const server = http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({success:true}));
       } catch (err) {
-        res.writeHead(500, { "Content-Type": "application/json" });
+        res.writeHead(err.status || 500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: err.message }));
       }
-    });
+    })();
     return;
   }
 
@@ -505,11 +543,9 @@ const server = http.createServer((req, res) => {
 
   // 4. API: Jev Direct Tests (Route / Check / Review) via Native Jev Agent Track
   if (pathname === "/api/jev/test" && req.method === "POST") {
-    let body = "";
-    req.on("data", c => body += c);
-    req.on("end", async () => {
+    (async () => {
       try {
-        const { action, text } = JSON.parse(body);
+        const { action, text } = await readJsonBody(req, 262144);
         
         if (action === "route") {
           const route = await jevAgent.routeTask(text);
@@ -539,25 +575,33 @@ const server = http.createServer((req, res) => {
         let errOut = "";
         jevProc.stdout.on("data", d => out += d);
         jevProc.stderr.on("data", d => errOut += d);
+        jevProc.on("error", err => {
+          if (!res.headersSent) {
+            res.writeHead(500, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: err.message }));
+          }
+        });
         jevProc.on("close", code => {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ code, output: out.trim(), error: errOut.trim() }));
+          if (!res.headersSent) {
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ code, output: out.trim(), error: errOut.trim() }));
+          }
         });
       } catch (err) {
-        res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: err.message }));
+        if (!res.headersSent) {
+          res.writeHead(err.status || 500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: err.message }));
+        }
       }
-    });
+    })();
     return;
   }
 
   // 4b. API: Jev Emotion & Motion Director via Native Jev Agent Track
   if (pathname === "/api/jev/emotion" && req.method === "POST") {
-    let body = "";
-    req.on("data", c => body += c);
-    req.on("end", async () => {
+    (async () => {
       try {
-        const { text, context } = JSON.parse(body);
+        const { text, context } = await readJsonBody(req, 131072);
         const result = await jevAgent.directEmotion(text, context);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({
@@ -568,10 +612,10 @@ const server = http.createServer((req, res) => {
           rawProbs: result.rawProbs
         }));
       } catch (err) {
-        res.writeHead(500, { "Content-Type": "application/json" });
+        res.writeHead(err.status || 500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: err.message }));
       }
-    });
+    })();
     return;
   }
 
@@ -644,11 +688,9 @@ const server = http.createServer((req, res) => {
 
   // 4f. API: TTS Voice Clone (Qwen3-TTS-12Hz-0.6B-Base)
   if (pathname === "/api/tts/clone" && req.method === "POST") {
-    let body = "";
-    req.on("data", c => body += c);
-    req.on("end", async () => {
+    (async () => {
       try {
-        const { text, refAudio, refText, maxTokens } = JSON.parse(body || "{}");
+        const { text, refAudio, refText, maxTokens } = await readJsonBody(req, 131072);
         const result = ttsEngine.synthesizeClone(text, { refAudio, refText, maxTokens });
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({
@@ -656,28 +698,26 @@ const server = http.createServer((req, res) => {
           ...result
         }));
       } catch (err) {
-        res.writeHead(500, { "Content-Type": "application/json" });
+        res.writeHead(err.status || 500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ code: -1, error: err.message }));
       }
-    });
+    })();
     return;
   }
 
   // 4g. API: TTS Voice Selection
   if (pathname === "/api/tts/set-voice" && req.method === "POST") {
-    let body = "";
-    req.on("data", c => body += c);
-    req.on("end", async () => {
+    (async () => {
       try {
-        const { voice, sid } = JSON.parse(body);
+        const { voice, sid } = await readJsonBody(req, 65536);
         const updated = ttsEngine.setActiveVoice(voice, sid);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ code: 0, model: updated }));
       } catch (err) {
-        res.writeHead(500, { "Content-Type": "application/json" });
+        res.writeHead(err.status || 500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: err.message }));
       }
-    });
+    })();
     return;
   }
 
@@ -698,7 +738,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, {
       "Content-Type": contentType,
       "Cache-Control": "no-cache",
-      "Access-Control-Allow-Origin": "*"
+      ...require("./cloud-tts.cjs").corsHeaders(req)
     });
 
     fs.createReadStream(filePath).pipe(res);
